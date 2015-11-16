@@ -1,0 +1,5 @@
+.pyc
+secrets/*
+*.db
+*.pyc
+*.swp
