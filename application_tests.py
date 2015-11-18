@@ -43,7 +43,25 @@ class ApplicationTestCase(unittest.TestCase):
         pass
 
 
-paths = ['/', '/login', '/logout', '/category', '/item']
+def build_crud_paths(item_name, id):
+    ret = ['/%s/%s/%s/' % (item_name, id, c) for c in ('edit', 'delete')]
+    ret.extend([
+        '/%s/' % item_name,
+        '/%s/new/' % item_name,
+        '/%s/%s/' % (item_name, id)])
+    return ret
+
+
+class TestBuildPaths(unittest.TestCase):
+
+    def test_good(self):
+        s = "obj"
+        result = build_crud_paths(s, 1)
+        self.assertItemsEqual(result, ['/obj/', '/obj/new/', '/obj/1/', '/obj/1/edit/', '/obj/1/delete/'])
+
+
+paths = ['/', '/login', '/logout', '/category/']
+paths.extend(build_crud_paths('item', 1))
 
 
 class TestPathMeta(type):
