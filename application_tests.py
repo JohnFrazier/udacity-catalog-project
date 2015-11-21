@@ -1,5 +1,6 @@
 import unittest
-from application import app
+
+from application import app, db, init_db
 from functools import update_wrapper
 
 
@@ -34,9 +35,10 @@ class ApplicationTestCase(unittest.TestCase):
     'base test class for app db handling'
 
     def setUp(self):
+        app.config['testing'] = True
+        app.debug = True
         self.app = app.test_client()
-        self.app.testing = True
-        # TODO initialize test db
+        init_db()
 
     def tearDown(self):
         # TODO destroy test db
