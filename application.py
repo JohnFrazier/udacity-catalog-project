@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request
+from flask import flash, redirect
 import database as db
 from models import Category, User, Item
 
@@ -30,7 +31,7 @@ def view_category_list():
     try:
         cats = session.query(Category).all()
     except db.NoResultFound:
-        return "No categories available."
+        flash("No categories available.")
     return render_template('categories.html', categories=cats)
 
 
@@ -39,17 +40,19 @@ def view_category(id):
     try:
         cat = session.query(Category).filter_by(id=id).one()
     except db.NoResultFound:
-        return "Category not found"
+        flash("Category not found")
+        return redirect("/category/")
     return render_template('category.html', category=cat)
 
 
 @app.route('/item/')
 def view_item_one():
     if request.method == 'GET':
+        item = None
         try:
             item = session.query(Item).one()
         except db.NoResultFound:
-            return "No items available."
+            flash("No items available")
         return render_template('item.html', item=item)
     # TODO: receive posted new items
 
@@ -60,8 +63,8 @@ def view_item(id):
         try:
             item = session.query(Item).filter_by(id=id).one()
         except db.NoResultFound:
-            # TODO flash("item not found")
-            return "Item not found"
+            flash("Item not found")
+            return redirect("/item/")
         return render_template('item.html', item=item)
     else:
         print request.method
@@ -73,7 +76,8 @@ def view_item_edit(id):
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
-        return "Item not found"
+        flash("Item not found")
+        return redirect("/item/")
     return render_template('itemEdit.html', item=item)
 
 
@@ -82,22 +86,43 @@ def view_item_delete(id):
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
-        return "Item not found"
+        flash("Item not found")
+        return redirect("/item/")
     return render_template('itemDelete.html', item)
 
 
-@app.route('/item/new/')
+@app.route('/item/new/', methods=['POST', 'GET'])
 def view_item_new():
-    return render_template('itemNew.html')
+    cats = session.query(Category).all()
+    if request.method == 'POST':
+        if request.form['newCategory'] == 'True':
+            cat = Category(name=request.form['categoryName'])
+            session.add(cat)
+            flash("%s added to categories." % cat.name)
+        else:
+            cat = session.query(Category).filter_by(request.form['CategoryName'])
+
+        newItem = Item(
+            name=request.form['itemName'],
+            description=request.form['description'],
+            category_id=cat.id)
+        # TODO user_id=...
+        session.add(newItem)
+        session.commit()
+        flash("%s added to items." % newItem.name)
+        return redirect("/item/")
+
+    else:
+        return render_template('itemNew.html', categories=cats)
 
 
-def init_db():
+def init_db(path):
     global engine, DBSession, session
-    engine, DBSession = db.init_db('sqlite:///catalog.db')
+    engine, DBSession = db.init_db(path)
     session = DBSession()
 
 if __name__ == '__main__':
-    init_db()
+    init_db('sqlite:///catalog.db')
     app.debug = True
-    secret_key = "something_secret"
+    app.secret_key = "something_secret"
     app.run(host='0.0.0.0', port=8008)

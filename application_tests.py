@@ -37,8 +37,9 @@ class ApplicationTestCase(unittest.TestCase):
     def setUp(self):
         app.config['testing'] = True
         app.debug = True
+        app.secret_key = "something_secret"
         self.app = app.test_client()
-        init_db()
+        init_db('sqlite://')
 
     def tearDown(self):
         # TODO destroy test db
@@ -76,7 +77,7 @@ class TestPathMeta(type):
 
             def testPath(self):
                 'test that all get paths can be reached.'
-                result = self.app.get(path)
+                result = self.app.get(path, follow_redirects=True)
                 self.assertEqual(result.status_code, 200)
             return testPath
 
@@ -92,6 +93,23 @@ class TestPathMeta(type):
 class PathTests(ApplicationTestCase):
     __metaclass__ = TestPathMeta
 
+
+class PostTests(ApplicationTestCase):
+
+    def test_newItem(self):
+        ret = self.app.post(
+            "/item/new/",
+            data=dict(
+                itemName="test_item",
+                categoryName="test_category",
+                newCategory="True",
+                description="Just a fake post."),
+            follow_redirects=True)
+        assert 'test_item added' in ret.data
+        assert 'test_category added' in ret.data
+        page = self.app.get('/item/').data
+        print page
+        assert 'test_item' in self.app.get('/item/').data
 
 if __name__ == '__main__':
     unittest.main()
