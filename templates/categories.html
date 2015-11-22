@@ -1,6 +1,14 @@
 {% extends "site.html" %}
 
-This is categories.html
+{% block title %}Categories{% endblock %}
+
+{% block body %}
+<h2>Category list:</h2>
+<h3>id, name</h3>
 {% for c in categories %}
-{{ c }}
+<div>
+{{ "%s %s" % (c.id, c.name) }}
+</div>
 {% endfor %}
+
+{% endblock %}

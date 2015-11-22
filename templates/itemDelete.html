@@ -1,2 +1,9 @@
-This is itemDelete.html
 {% extends "site.html" %}
+{% block title %}Delete Item{% endblock %}
+
+{% block body %}
+<h2>Original content:</h2>
+<div>{{ "%s %s %s %s" % (item.id, item.name, item.category, item.description) }}</div>
+<h2>Are you sure?</h2>
+
+{% endblock %}

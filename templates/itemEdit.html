@@ -1,2 +1,10 @@
-This is itemEdit.html
 {% extends "site.html" %}
+{% block title %}Edit Item{% endblock %}
+
+{% block body %}
+
+<h2>{{ "Edit Item \"%s\"" % item.name }}</h2>
+<h2>Original content:</h2>
+<div>{{ "%s %s %s %s" % (item.id, item.name, item.category, item.description) }}</div>
+
+{% endblock %}

@@ -1,4 +1,11 @@
-This is category.html
-
-{% category %}
 {% extends "site.html" %}
+
+{% block title %}Category Detail{% endblock %}
+
+{% block body %}
+<h2>Category Detail:</h2>
+<h3>id, name</h3>
+<div>
+{{ "%s %s" % (category.id, category.name) }}
+</div>
+{% endblock %}

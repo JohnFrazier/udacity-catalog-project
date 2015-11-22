@@ -110,6 +110,7 @@ class PostTests(ApplicationTestCase):
         page = self.app.get('/item/').data
         print page
         assert 'test_item' in self.app.get('/item/').data
+        assert 'test_category' in self.app.get('/category/').data
 
 if __name__ == '__main__':
     unittest.main()

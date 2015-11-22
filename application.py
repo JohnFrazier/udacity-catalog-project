@@ -48,12 +48,12 @@ def view_category(id):
 @app.route('/item/')
 def view_item_one():
     if request.method == 'GET':
-        item = None
+        items = [None]
         try:
-            item = session.query(Item).one()
+            items = session.query(Item).all()
         except db.NoResultFound:
             flash("No items available")
-        return render_template('item.html', item=item)
+        return render_template('item.html', items=items)
     # TODO: receive posted new items
 
 
@@ -67,8 +67,8 @@ def view_item(id):
             return redirect("/item/")
         return render_template('item.html', item=item)
     else:
-        print request.method
-    # TODO: receive posted updated and deleted items
+        pass
+        # TODO: receive posted updated and deleted items
 
 
 @app.route('/item/<int:id>/edit/')
@@ -88,14 +88,15 @@ def view_item_delete(id):
     except db.NoResultFound:
         flash("Item not found")
         return redirect("/item/")
-    return render_template('itemDelete.html', item)
+    return render_template('itemDelete.html', item=item)
 
 
 @app.route('/item/new/', methods=['POST', 'GET'])
 def view_item_new():
     cats = session.query(Category).all()
     if request.method == 'POST':
-        if request.form['newCategory'] == 'True':
+
+        if request.form['categoryName'] not in cats:
             cat = Category(name=request.form['categoryName'])
             session.add(cat)
             flash("%s added to categories." % cat.name)

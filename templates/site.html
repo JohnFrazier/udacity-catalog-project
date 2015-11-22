@@ -1,11 +1,23 @@
-This is site.html
-
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-        <ul class=flashes>
-        {% for message in messages %}
-            <li>{{ message }}</li>
-        {% endfor %}
-        </ul>
-    {% endif %}
-{% endwith %}
+<!doctype html>
+<html>
+<head>
+<title>Catalog - {% block title %}{% endblock %}</title>
+</head>
+</body>
+{% block flash %}
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class=flash>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+{% endblock %}
+<div id=body>
+{% block body %}
+{% endblock %}
+</div>
+</body>
+</html>
