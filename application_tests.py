@@ -63,7 +63,7 @@ class TestBuildPaths(unittest.TestCase):
         self.assertItemsEqual(result, ['/obj/', '/obj/new/', '/obj/1/', '/obj/1/edit/', '/obj/1/delete/'])
 
 
-paths = ['/', '/login', '/logout', '/category/']
+paths = ['/', '/login/', '/logout/', '/category/']
 paths.extend(build_crud_paths('item', 1))
 
 
@@ -102,15 +102,26 @@ class PostTests(ApplicationTestCase):
             data=dict(
                 itemName="test_item",
                 categoryName="test_category",
-                newCategory="True",
                 description="Just a fake post."),
             follow_redirects=True)
         assert 'test_item added' in ret.data
         assert 'test_category added' in ret.data
-        page = self.app.get('/item/').data
-        print page
+        # page = self.app.get('/item/').data
+        # print page
         assert 'test_item' in self.app.get('/item/').data
         assert 'test_category' in self.app.get('/category/').data
+
+    def test_delItem(self):
+        ret = self.app.post(
+            "/item/new/",
+            data=dict(
+                itemName="test_delItem",
+                categoryName="test_delItem_cat",
+                description="death comes quickly for me"),
+            follow_redirects=True)
+        assert 'test_delItem added' in ret.data
+        ret = self.app.post("/item/1/delete/", follow_redirects=True)
+        assert 'test_delItem deleted' in ret.data
 
 if __name__ == '__main__':
     unittest.main()

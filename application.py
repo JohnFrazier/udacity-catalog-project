@@ -16,12 +16,12 @@ def view_main():
     return render_template('main.html')
 
 
-@app.route('/login')
+@app.route('/login/')
 def view_login():
     return render_template('login.html')
 
 
-@app.route('/logout')
+@app.route('/logout/')
 def view_logout():
     return render_template('logout.html')
 
@@ -37,16 +37,18 @@ def view_category_list():
 
 @app.route('/category/<int:id>/')
 def view_category(id):
+    items = [None]
     try:
         cat = session.query(Category).filter_by(id=id).one()
+        items = session.query(Item).filter_by(category_id=id)
     except db.NoResultFound:
         flash("Category not found")
         return redirect("/category/")
-    return render_template('category.html', category=cat)
+    return render_template('category.html', category=cat, items=items)
 
 
 @app.route('/item/')
-def view_item_one():
+def view_items():
     if request.method == 'GET':
         items = [None]
         try:
@@ -71,22 +73,36 @@ def view_item(id):
         # TODO: receive posted updated and deleted items
 
 
-@app.route('/item/<int:id>/edit/')
+@app.route('/item/<int:id>/edit/', methods=['POST', 'GET'])
 def view_item_edit(id):
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
         flash("Item not found")
         return redirect("/item/")
-    return render_template('itemEdit.html', item=item)
+    if request.method == 'POST':
+        item.name = request.form['itemName']
+        item.category = request.form['categoryName']
+        item.description = request.form['description']
+        session.add(item)
+        session.commit()
+        flash("%s updated." % item.name)
+        return redirect('/item/%s/' % id)
+    else:
+        return render_template('itemEdit.html', item=item)
 
 
-@app.route('/item/<int:id>/delete/')
+@app.route('/item/<int:id>/delete/', methods=['POST', 'GET'])
 def view_item_delete(id):
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
         flash("Item not found")
+        return redirect("/item/")
+    if request.method == 'POST':
+        session.delete(item)
+        session.commit()
+        flash("%s deleted" % item.name)
         return redirect("/item/")
     return render_template('itemDelete.html', item=item)
 
