@@ -1,8 +1,8 @@
 import unittest
 
 from application import app, db, init_db
+import application as catalog
 from functools import update_wrapper
-
 
 def decorator(d):
     "make function d a decorator: d wraps a function fn."
@@ -96,32 +96,62 @@ class PathTests(ApplicationTestCase):
 
 class PostTests(ApplicationTestCase):
 
-    def test_newItem(self):
-        ret = self.app.post(
+    def createItem(self, data):
+        return self.app.post(
             "/item/new/",
-            data=dict(
-                itemName="test_item",
-                categoryName="test_category",
-                description="Just a fake post."),
+            data=data,
             follow_redirects=True)
+
+    def deleteItem(self, id):
+        return self.app.post("/item/%s/delete/" % id, follow_redirects=True)
+
+    def test_newItem(self):
+        data = dict(
+            itemName="test_item",
+            categoryName="test_category",
+            description="Just a fake post.")
+        ret = self.createItem(data)
         assert 'test_item added' in ret.data
         assert 'test_category added' in ret.data
-        # page = self.app.get('/item/').data
-        # print page
         assert 'test_item' in self.app.get('/item/').data
         assert 'test_category' in self.app.get('/category/').data
 
     def test_delItem(self):
-        ret = self.app.post(
-            "/item/new/",
-            data=dict(
-                itemName="test_delItem",
-                categoryName="test_delItem_cat",
-                description="death comes quickly for me"),
-            follow_redirects=True)
+        '''add and then delete an item'''
+        data = dict(
+            itemName="test_delItem",
+            categoryName="test_delItem_cat",
+            description="death comes quickly for me")
+        ret = self.createItem(data)
         assert 'test_delItem added' in ret.data
-        ret = self.app.post("/item/1/delete/", follow_redirects=True)
+        # get item for id
+        item = catalog.session.query(catalog.Item).filter_by(
+            name=data['itemName']).one()
+        ret = self.deleteItem(item.id)
         assert 'test_delItem deleted' in ret.data
+
+    def test_editItem(self):
+        '''create and then edit a item'''
+        dataPre = dict(
+            itemName="test_editItem_pre",
+            categoryName="test_editItem_cat_pre",
+            description="change comes quickly for me")
+        dataPost = dict(
+            itemName="test_editedItem",
+            categoryName="test_editedItem-cat",
+            description="changes")
+        # add a test item
+        ret = self.createItem(dataPre)
+        # find the item id
+        item = catalog.session.query(catalog.Item).filter_by(
+            name=dataPre['itemName']).one()
+        assert 'test_editItem_pre added' in ret.data
+        # update by id
+        ret = self.app.post(
+            "/item/%s/edit/" % item.id,
+            data=dataPost,
+            follow_redirects=True)
+        assert '%s updated' % dataPost['itemName'] in ret.data
 
 if __name__ == '__main__':
     unittest.main()
