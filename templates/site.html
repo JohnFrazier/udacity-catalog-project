@@ -1,9 +1,10 @@
 <!doctype html>
 <html>
+
 <head>
 <title>Catalog - {% block title %}{% endblock %}</title>
 </head>
-</body>
+<body>
 {% block flash %}
     {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -15,6 +16,7 @@
         {% endif %}
     {% endwith %}
 {% endblock %}
+
 <div id=body>
 {% block body %}
 {% endblock %}
