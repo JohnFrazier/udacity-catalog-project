@@ -6,5 +6,19 @@
 <h2>{{ "Edit Item \"%s\"" % item.name }}</h2>
 <h2>Original content:</h2>
 <div>{{ "%s %s %s %s" % (item.id, item.name, item.category, item.description) }}</div>
+<div class="form">
+    <form action="/item/{{item.id}}/edit/" method="post">
+        <fieldset>
+            <legend>Item information</legend>
+            Item Name:<br>
+            <input type="text" name="itemName" value="{{item.name}}"><br>
+            Category Name:<br>
+            <input type="text" name="categoryName" value="{{item.category}}"><br>
+            Description:<br>
+            <input type="text" name="description" value="{{item.description}}"><br><br>
+            <button type="submit" id="submit" type="submit">Create</button>
+        </fieldset>
+    </form>
+</div>
 
 {% endblock %}
