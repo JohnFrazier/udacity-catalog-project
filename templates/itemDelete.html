@@ -3,7 +3,12 @@
 
 {% block body %}
 <h2>Original content:</h2>
-<div>{{ "%s %s %s %s" % (item.id, item.name, item.category, item.description) }}</div>
-<h2>Are you sure?</h2>
-
+<div>{{ "%s %s %s %s" % (item.id, item.name, item.category_id, item.description) }}</div>
+<div class="form">
+    <form action="/item/{{item.id}}/" method="post">
+        <input type="hidden" name="requestType" value="delete">
+        <h2>Are you sure?</h2>
+        <button type="submit" id="submit" type="submit">Delete</button>
+    </form>
+</div>
 {% endblock %}

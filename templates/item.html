@@ -4,10 +4,10 @@
 
 {% block body %}
 <h2>Item list:</h2>
-<h4><ul>id, name, category, description</br></ul></h4>
+<h4><ul>id, name, category_id, description</br></ul></h4>
+
 {% for i in items %}
-{{ "%s | %s | %s | %s" % (i.id, i.name, i.category, i.description) }}
-</br>
+<div> {{ "%s %s %s %s" % (i.id, i.name, i.category_id, i.description) }} </div>
 {% endfor %}
 
 {% endblock %}

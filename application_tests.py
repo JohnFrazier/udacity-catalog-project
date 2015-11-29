@@ -103,24 +103,30 @@ class PostTests(ApplicationTestCase):
             follow_redirects=True)
 
     def deleteItem(self, id):
-        return self.app.post("/item/%s/delete/" % id, follow_redirects=True)
+        data = dict(requestType="delete")
+        return self.app.post(
+            "/item/%s/" % id,
+            data=data,
+            follow_redirects=True)
 
     def test_newItem(self):
+        cat = catalog.Category(name="test_category")
+        catalog.session.add(cat)
         data = dict(
             itemName="test_item",
-            categoryName="test_category",
+            category_id=str(cat.id),
             description="Just a fake post.")
         ret = self.createItem(data)
         assert 'test_item added' in ret.data
-        assert 'test_category added' in ret.data
         assert 'test_item' in self.app.get('/item/').data
-        assert 'test_category' in self.app.get('/category/').data
 
     def test_delItem(self):
         '''add and then delete an item'''
+        cat = catalog.Category(name="test_category")
+        catalog.session.add(cat)
         data = dict(
             itemName="test_delItem",
-            categoryName="test_delItem_cat",
+            category_id=str(cat.id),
             description="death comes quickly for me")
         ret = self.createItem(data)
         assert 'test_delItem added' in ret.data
@@ -132,23 +138,31 @@ class PostTests(ApplicationTestCase):
 
     def test_editItem(self):
         '''create and then edit a item'''
+        cat = catalog.Category(name="test_category")
+        catalog.session.add(cat)
+        cat_two = catalog.Category(name="second")
+        catalog.session.add(cat)
         dataPre = dict(
             itemName="test_editItem_pre",
-            categoryName="test_editItem_cat_pre",
+            category_id=str(cat.id),
             description="change comes quickly for me")
+
         dataPost = dict(
+            requestType="edit",
             itemName="test_editedItem",
-            categoryName="test_editedItem-cat",
+            category_id=str(cat_two.id),
             description="changes")
         # add a test item
         ret = self.createItem(dataPre)
         # find the item id
-        item = catalog.session.query(catalog.Item).filter_by(
-            name=dataPre['itemName']).one()
+        qret = catalog.session.query(catalog.Item).filter_by(
+            name=dataPre['itemName'])
+        item = qret.one()
         assert 'test_editItem_pre added' in ret.data
+
         # update by id
         ret = self.app.post(
-            "/item/%s/edit/" % item.id,
+            "/item/%s/" % item.id,
             data=dataPost,
             follow_redirects=True)
         assert '%s updated' % dataPost['itemName'] in ret.data

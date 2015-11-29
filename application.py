@@ -49,88 +49,73 @@ def view_category(id):
 
 @app.route('/item/')
 def view_items():
-    if request.method == 'GET':
-        items = [None]
-        try:
-            items = session.query(Item).all()
-        except db.NoResultFound:
-            flash("No items available")
-        return render_template('item.html', items=items)
-    # TODO: receive posted new items
+    items = [None]
+    try:
+        items = session.query(Item).all()
+    except db.NoResultFound:
+        flash("No items available")
+    return render_template('item.html', items=items)
 
 
-@app.route('/item/<int:id>/')
+@app.route('/item/<int:id>/', methods=['POST', 'GET'])
 def view_item(id):
-    if request.method == 'GET':
-        try:
-            item = session.query(Item).filter_by(id=id).one()
-        except db.NoResultFound:
-            flash("Item not found")
+    try:
+        item = session.query(Item).filter_by(
+            id=id).one()
+    except db.NoResultFound:
+        flash("Item not found")
+        return redirect("/item/")
+    if request.method == 'POST':
+        if request.form['requestType'] == "edit":
+            item.name = request.form['itemName']
+            item.category_id = request.form['category_id']
+            item.description = request.form['description']
+            session.add(item)
+            session.commit()
+            flash("%s updated." % item.name)
+        elif request.form['requestType'] == "delete":
+            session.delete(item)
+            session.commit()
+            flash("%s deleted" % item.name)
             return redirect("/item/")
-        return render_template('item.html', item=item)
-    else:
-        pass
-        # TODO: receive posted updated and deleted items
+    return render_template('itemDetail.html', item=item)
 
 
-@app.route('/item/<int:id>/edit/', methods=['POST', 'GET'])
+@app.route('/item/<int:id>/edit/')
 def view_item_edit(id):
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
         flash("Item not found")
         return redirect("/item/")
-    if request.method == 'POST':
-        item.name = request.form['itemName']
-        item.category = request.form['categoryName']
-        item.description = request.form['description']
-        session.add(item)
-        session.commit()
-        flash("%s updated." % item.name)
-        return redirect('/item/%s/' % id)
     else:
         return render_template('itemEdit.html', item=item)
 
 
-@app.route('/item/<int:id>/delete/', methods=['POST', 'GET'])
+@app.route('/item/<int:id>/delete/')
 def view_item_delete(id):
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
         flash("Item not found")
         return redirect("/item/")
-    if request.method == 'POST':
-        session.delete(item)
-        session.commit()
-        flash("%s deleted" % item.name)
-        return redirect("/item/")
     return render_template('itemDelete.html', item=item)
 
 
 @app.route('/item/new/', methods=['POST', 'GET'])
 def view_item_new():
-    cats = session.query(Category).all()
     if request.method == 'POST':
-
-        if request.form['categoryName'] not in cats:
-            cat = Category(name=request.form['categoryName'])
-            session.add(cat)
-            flash("%s added to categories." % cat.name)
-        else:
-            cat = session.query(Category).filter_by(request.form['CategoryName'])
-
         newItem = Item(
             name=request.form['itemName'],
             description=request.form['description'],
-            category_id=cat.id)
-        # TODO user_id=...
+            category_id=request.form['category_id'])
         session.add(newItem)
         session.commit()
         flash("%s added to items." % newItem.name)
         return redirect("/item/")
 
     else:
-        return render_template('itemNew.html', categories=cats)
+        return render_template('itemNew.html')
 
 
 def init_db(path):
