@@ -1,0 +1,10 @@
+{% extends "site.html" %}
+
+{% block title %}{{obj.human_name}} {{obj.id}} Details{% endblock %}
+{% block body %}
+<h2>{{obj.human_name}} {{obj.id}} Details</h2>
+<div>
+    {{ obj }}
+</div>
+
+{% endblock %}

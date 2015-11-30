@@ -1,0 +1,30 @@
+{% extends "site.html" %}
+{% block title %}Edit {{obj.human_name}}{% endblock %}
+
+{% block body %}
+
+<h2>{{ "Edit %s \"%s\"" % (obj.human_name, obj.name) }}</h2>
+<h2>Original content:</h2>
+<div>{{ obj }}</div>
+
+<div class="form">
+    <form action="/{{obj.uri_path}}/{{obj.id}}/" method="post">
+        {% for i in obj.asEditFormData() %}
+            {% if i["type"] == "hidden" %}
+                <input type="hidden" name="{{i.name}}" value="{{i.value}}">
+            {% endif %}
+        {% endfor %}
+        <fieldset>
+            <legend>{{ obj.human_name }} information</legend>
+            {% for i in obj.asEditFormData() %}
+                {% if i.editable %}
+                    {{i.human_name}}:<br>
+                    <input type="{{i.type}}" name="{{i.db_name}}" value="{{i.value}}"><br>
+                {% endif %}
+            {% endfor %}
+            <button type="submit" id="submit" type="submit">Submit</button>
+        </fieldset>
+    </form>
+</div>
+
+{% endblock %}

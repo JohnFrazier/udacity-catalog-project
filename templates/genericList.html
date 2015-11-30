@@ -1,0 +1,12 @@
+{% extends "site.html" %}
+
+{% block title %}{{"%s list" % objType.human_name }}{% endblock %}
+
+{% block body %}
+<h2>{{"%s list:" % objType.human_name }}</h2>
+
+{% for i in obj_list %}
+    <div> {{ i }} </div>
+{% endfor %}
+
+{% endblock %}

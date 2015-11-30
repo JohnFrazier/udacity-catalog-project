@@ -1,0 +1,20 @@
+{% extends "site.html" %}
+{% block title %}Create New {{objType.human_name}}{% endblock %}
+
+{% block body %}
+
+<h2>Create new {{objType.human_name}}</h2>
+
+<div class="form">
+    <form action="/{{objType.uri_path}}/new/" method="post">
+        <fieldset>
+            <legend>{{ objType.human_name }} information</legend>
+            {% for i in objType.newFormData %}
+                {{i.human_name}}:<br>
+                <input type="{{i.type}}" name="{{i.db_name}}"><br>
+            {% endfor %}
+            <button type="submit" id="submit" type="submit">Submit</button>
+        </fieldset>
+    </form>
+</div>
+{% endblock %}

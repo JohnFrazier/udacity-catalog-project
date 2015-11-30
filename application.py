@@ -28,48 +28,27 @@ def view_logout():
 
 @app.route('/category/')
 def view_category_list():
+    metaType = Category
+    items = [None]
     try:
-        cats = session.query(Category).all()
+        items = session.query(metaType).all()
     except db.NoResultFound:
-        flash("No categories available.")
-    return render_template('categories.html', categories=cats)
+        flash("No %s available" % metaType.human_name)
+    return render_template('genericList.html', objType=metaType, obj_list=items)
 
 
-@app.route('/category/<int:id>/')
+@app.route('/category/<int:id>/', methods=['POST', 'GET'])
 def view_category(id):
-    items = [None]
+    metaType = Category
     try:
-        cat = session.query(Category).filter_by(id=id).one()
-        items = session.query(Item).filter_by(category_id=id)
-    except db.NoResultFound:
-        flash("Category not found")
-        return redirect("/category/")
-    return render_template('category.html', category=cat, items=items)
-
-
-@app.route('/item/')
-def view_items():
-    items = [None]
-    try:
-        items = session.query(Item).all()
-    except db.NoResultFound:
-        flash("No items available")
-    return render_template('item.html', items=items)
-
-
-@app.route('/item/<int:id>/', methods=['POST', 'GET'])
-def view_item(id):
-    try:
-        item = session.query(Item).filter_by(
+        item = session.query(metaType).filter_by(
             id=id).one()
     except db.NoResultFound:
-        flash("Item not found")
-        return redirect("/item/")
+        flash("%s not found" % metaType.human_name)
+        return redirect("/%s/" % metaType.uri_path)
     if request.method == 'POST':
         if request.form['requestType'] == "edit":
-            item.name = request.form['itemName']
-            item.category_id = request.form['category_id']
-            item.description = request.form['description']
+            item.formUpdate(request.form)
             session.add(item)
             session.commit()
             flash("%s updated." % item.name)
@@ -77,45 +56,119 @@ def view_item(id):
             session.delete(item)
             session.commit()
             flash("%s deleted" % item.name)
-            return redirect("/item/")
-    return render_template('itemDetail.html', item=item)
+            return redirect("/%s/" % metaType.uri_path)
+    return render_template('genericDetail.html', obj=item)
+
+
+@app.route('/category/<int:id>/edit/')
+def view_category_edit(id):
+    metaType = Category
+    try:
+        item = session.query(metaType).filter_by(id=id).one()
+    except db.NoResultFound:
+        flash("%s not found" % metaType.human_name)
+        return redirect("/%s/" % metaType.uri_path)
+    else:
+        return render_template('genericEdit.html', obj=item)
+
+
+@app.route('/category/<int:id>/delete/')
+def view_category_delete(id):
+    metaType = Category
+    try:
+        item = session.query(metaType).filter_by(id=id).one()
+    except db.NoResultFound:
+        flash("%s not found" % metaType.human_name)
+        return redirect("/%s/" % metaType.uri_path)
+    return render_template('genericDelete.html', obj=item)
+
+
+@app.route('/category/new/', methods=['POST', 'GET'])
+def view_category_new():
+    metaType = Category
+    if request.method == 'POST':
+        item = metaType()
+        item.formUpdate(request.form)
+        session.add(item)
+        session.commit()
+        flash("%s added to %ss." % (item.name, metaType.human_name))
+        return redirect("/%s/" % metaType.uri_path)
+
+    else:
+        return render_template('genericNew.html', objType=metaType)
+
+
+# TODO merge duplicated code with above
+@app.route('/item/')
+def view_items():
+    metaType = Item
+    items = [None]
+    try:
+        items = session.query(metaType).all()
+    except db.NoResultFound:
+        flash("No items available")
+    return render_template('genericList.html', objType=metaType, obj_list=items)
+
+
+@app.route('/item/<int:id>/', methods=['POST', 'GET'])
+def view_item(id):
+    metaType = Item
+    try:
+        item = session.query(metaType).filter_by(
+            id=id).one()
+    except db.NoResultFound:
+        flash("%s not found" % metaType.human_name)
+        return redirect("/%s/" % metaType.uri_path)
+    if request.method == 'POST':
+        if request.form['requestType'] == "edit":
+            item.formUpdate(request.form)
+            session.add(item)
+            session.commit()
+            flash("%s updated." % item.name)
+        elif request.form['requestType'] == "delete":
+            session.delete(item)
+            session.commit()
+            flash("%s deleted" % item.name)
+            return redirect("/%s/" % metaType.uri_path)
+    return render_template('genericDetail.html', obj=item)
 
 
 @app.route('/item/<int:id>/edit/')
 def view_item_edit(id):
+    metaType = Item
     try:
-        item = session.query(Item).filter_by(id=id).one()
+        item = session.query(metaType).filter_by(id=id).one()
     except db.NoResultFound:
-        flash("Item not found")
-        return redirect("/item/")
+        flash("%s not found" % metaType.human_name)
+        return redirect("/%s/" % metaType.uri_path)
     else:
-        return render_template('itemEdit.html', item=item)
+        return render_template('genericEdit.html', obj=item)
 
 
 @app.route('/item/<int:id>/delete/')
 def view_item_delete(id):
+    metaType = Item
     try:
-        item = session.query(Item).filter_by(id=id).one()
+        item = session.query(metaType).filter_by(id=id).one()
     except db.NoResultFound:
-        flash("Item not found")
-        return redirect("/item/")
-    return render_template('itemDelete.html', item=item)
+        flash("%s not found" % metaType.human_name)
+        return redirect("/%s/" % metaType.uri_path)
+    return render_template('genericDelete.html', obj=item)
 
 
 @app.route('/item/new/', methods=['POST', 'GET'])
 def view_item_new():
+    metaType = Item
     if request.method == 'POST':
-        newItem = Item(
-            name=request.form['itemName'],
-            description=request.form['description'],
-            category_id=request.form['category_id'])
-        session.add(newItem)
+        item = metaType()
+        item.formUpdate(request.form)
+        session.add(item)
         session.commit()
-        flash("%s added to items." % newItem.name)
-        return redirect("/item/")
+        flash("%s added to %ss." % (item.name, metaType.human_name))
+        return redirect("/%s/" % metaType.uri_path)
 
     else:
-        return render_template('itemNew.html')
+        return render_template('genericNew.html', objType=metaType)
 
 
 def init_db(path):

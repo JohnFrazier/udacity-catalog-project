@@ -4,6 +4,7 @@ from application import app, db, init_db
 import application as catalog
 from functools import update_wrapper
 
+
 def decorator(d):
     "make function d a decorator: d wraps a function fn."
     def _d(fn):
@@ -63,8 +64,9 @@ class TestBuildPaths(unittest.TestCase):
         self.assertItemsEqual(result, ['/obj/', '/obj/new/', '/obj/1/', '/obj/1/edit/', '/obj/1/delete/'])
 
 
-paths = ['/', '/login/', '/logout/', '/category/']
+paths = ['/', '/login/', '/logout/']
 paths.extend(build_crud_paths('item', 1))
+paths.extend(build_crud_paths('category', 1))
 
 
 class TestPathMeta(type):
@@ -96,76 +98,97 @@ class PathTests(ApplicationTestCase):
 
 class PostTests(ApplicationTestCase):
 
-    def createItem(self, data):
+    def createItem(self, item_case):
+        data = {}
+        for i in catalog.Item.newFormData:
+            data[i['db_name']] = item_case[i['db_name']]
         return self.app.post(
-            "/item/new/",
+            "/%s/new/" % catalog.Item.uri_path,
             data=data,
             follow_redirects=True)
 
     def deleteItem(self, id):
         data = dict(requestType="delete")
         return self.app.post(
-            "/item/%s/" % id,
+            "/%s/%s/" % (catalog.Item.uri_path, id),
             data=data,
             follow_redirects=True)
 
     def test_newItem(self):
         cat = catalog.Category(name="test_category")
         catalog.session.add(cat)
-        data = dict(
-            itemName="test_item",
-            category_id=str(cat.id),
-            description="Just a fake post.")
-        ret = self.createItem(data)
-        assert 'test_item added' in ret.data
-        assert 'test_item' in self.app.get('/item/').data
+        item_case = {
+            "name": "test_item",
+            "description": "test_description",
+            "category_id": str(cat.id)}
+        ret = self.createItem(item_case)
+        assert '%s added' % item_case['name'] in ret.data
+        assert item_case['name'] in ret.data
+        assert item_case['description'] in ret.data
+        assert item_case['category_id'] in ret.data
 
     def test_delItem(self):
         '''add and then delete an item'''
         cat = catalog.Category(name="test_category")
         catalog.session.add(cat)
-        data = dict(
-            itemName="test_delItem",
-            category_id=str(cat.id),
-            description="death comes quickly for me")
-        ret = self.createItem(data)
-        assert 'test_delItem added' in ret.data
+        item_case = {
+            "name": "test_delItem",
+            "description": "testdel description",
+            "category_id": str(cat.id)}
+        ret = self.createItem(item_case)
+        assert '%s added' % item_case['name'] in ret.data
         # get item for id
         item = catalog.session.query(catalog.Item).filter_by(
-            name=data['itemName']).one()
+            name=item_case['name']).one()
         ret = self.deleteItem(item.id)
-        assert 'test_delItem deleted' in ret.data
+        assert '%s deleted' % item_case['name'] in ret.data
+        assert item_case['description'] not in ret.data
+        assert item_case['category_id'] not in ret.data
 
     def test_editItem(self):
         '''create and then edit a item'''
+        # add two test categories
         cat = catalog.Category(name="test_category")
         catalog.session.add(cat)
         cat_two = catalog.Category(name="second")
-        catalog.session.add(cat)
-        dataPre = dict(
-            itemName="test_editItem_pre",
-            category_id=str(cat.id),
-            description="change comes quickly for me")
-
-        dataPost = dict(
-            requestType="edit",
-            itemName="test_editedItem",
-            category_id=str(cat_two.id),
-            description="changes")
+        catalog.session.add(cat_two)
         # add a test item
-        ret = self.createItem(dataPre)
-        # find the item id
+        item_case = {
+            "name": "test_item",
+            "description": "test_description",
+            "category_id": str(cat.id)}
+        catalog.session.add(cat)
+        ret = self.createItem(item_case)
+        assert '%s added' % item_case['name'] in ret.data
+        assert item_case['name'] in self.app.get('/item/').data
+        # find the id for the item we added
         qret = catalog.session.query(catalog.Item).filter_by(
-            name=dataPre['itemName'])
+            name=item_case['name'])
         item = qret.one()
-        assert 'test_editItem_pre added' in ret.data
+
+        item_case_two = {
+            "name": "edited Item",
+            "description": "edited description",
+            "category_id": str(cat_two.id)}
+        data = {}
+        for i in item.asEditFormData():
+            if i['editable']:
+                data[i["db_name"]] = item_case_two[i["db_name"]]
+            elif i['type'] == "hidden":
+                data[i["name"]] = i["value"]
 
         # update by id
         ret = self.app.post(
-            "/item/%s/" % item.id,
-            data=dataPost,
+            "/%s/%s/" % (item.uri_path, item.id),
+            data=data,
             follow_redirects=True)
-        assert '%s updated' % dataPost['itemName'] in ret.data
+        assert '%s updated' % item_case_two['name'] in ret.data
+        assert item_case_two['name'] in ret.data
+        assert item_case_two['description'] in ret.data
+        assert item_case_two['category_id'] in ret.data
+        assert item_case['name'] not in ret.data
+        assert item_case['description'] not in ret.data
+        assert item_case['category_id'] not in ret.data
 
 if __name__ == '__main__':
     unittest.main()
