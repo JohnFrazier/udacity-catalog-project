@@ -144,6 +144,9 @@ class PostTests(ApplicationTestCase):
         assert '%s deleted' % item_case['name'] in ret.data
         assert item_case['description'] not in ret.data
         assert item_case['category_id'] not in ret.data
+        # check that second deletion fails
+        ret = self.deleteItem(item.id)
+        assert "Item not found" in ret.data
 
     def test_editItem(self):
         '''create and then edit a item'''
@@ -171,6 +174,7 @@ class PostTests(ApplicationTestCase):
             "description": "edited description",
             "category_id": str(cat_two.id)}
         data = {}
+        # generate form data using keys defined in model
         for i in item.asEditFormData():
             if i['editable']:
                 data[i["db_name"]] = item_case_two[i["db_name"]]
@@ -186,6 +190,7 @@ class PostTests(ApplicationTestCase):
         assert item_case_two['name'] in ret.data
         assert item_case_two['description'] in ret.data
         assert item_case_two['category_id'] in ret.data
+        # check old item has been replaced
         assert item_case['name'] not in ret.data
         assert item_case['description'] not in ret.data
         assert item_case['category_id'] not in ret.data
