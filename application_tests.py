@@ -4,6 +4,7 @@ from application import app, db, init_db
 import application as catalog
 from functools import update_wrapper
 
+
 def decorator(d):
     "make function d a decorator: d wraps a function fn."
     def _d(fn):
@@ -38,8 +39,12 @@ class ApplicationTestCase(unittest.TestCase):
         app.config['testing'] = True
         app.debug = True
         app.secret_key = "something_secret"
+        app.testing = True
         self.app = app.test_client()
         init_db('sqlite://')
+        # login session
+        query = dict(state='testingstate')
+        self.app.post('/fbconnect', query_string=query, data='testytesttest')
 
     def tearDown(self):
         # TODO destroy test db

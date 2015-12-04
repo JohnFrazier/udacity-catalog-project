@@ -1,14 +1,22 @@
 from flask import Flask, render_template, request
-from flask import flash, redirect
+from flask import flash, redirect, make_response
+from flask import session as login_session
+
 import database as db
 from models import Category, User, Item
+import json
 
-import oauth
+from oauth import generateStateString, getUserDataFB
+from oauth import fb_user_info_fields
 
 app = Flask(__name__)
 engine = None
 DBSession = None
 session = None
+
+
+def isActiveSession(login_session):
+    return 'user_info' in login_session.keys()
 
 
 @app.route('/')
@@ -18,11 +26,70 @@ def view_main():
 
 @app.route('/login/')
 def view_login():
-    return render_template('login.html')
+    state = generateStateString()
+    login_session['state'] = state
+    return render_template('login.html', state=state)
+
+
+def make_json_response(response, code):
+    resp = make_response(response, code)
+    resp.headers['Content-Type'] = 'application/json'
+    return resp
+
+
+@app.route('/fbconnect', methods=['POST'])
+def fb_oauth_request():
+    user = None
+
+    # do not request real data if testing
+    if 'TESTING' in app.config.keys():
+        # and request.data == 'testytesttest':
+        user_info = {'user_id': 42}
+        for f in fb_user_info_fields:
+            user_info[f] = 'test_%s' % f
+        login_session['state'] = 'testingstate'
+        login_session['user_info'] = user_info
+        flash("You are now logged in as %s" %
+              user_info['username'])
+        return make_json_response(json.dumps("ok"), 200)
+
+    else:
+        if request.args.get('state') != login_session['state']:
+            return make_json_response(json.dumps('invalid state parameter.'), 401)
+
+            # continue oauth flow
+            user_info = getUserDataFB(request)
+            if 'error' in user_info.keys:
+                return make_json_response(user_info['error'], 401)
+
+    # oauth successful
+
+    # check db for existing user
+    try:
+        user = session.query(User).filter_by(user_info['email']).one()
+    except db.NoResultFound:
+        # create a new user
+        user = User()
+        # fill User obj assuming all fields from fb user info are in model
+        for f in fb_user_info_fields:
+            user[f] = user_info[f]
+        session.add(user)
+        session.commit()
+
+    user_info['user_id'] = user.id
+
+    flash("You are now logged in as %s" %
+          user_info['username'])
+
+    # add user to session
+    login_session['user_info'] = user_info
+    return make_json_response(json.dumps("ok"), 200)
 
 
 @app.route('/logout/')
 def view_logout():
+    if not isActiveSession(login_session):
+        flash("Error: You are already logged out.")
     return render_template('logout.html')
 
 
@@ -66,6 +133,9 @@ def view_item(id):
         flash("Item not found")
         return redirect("/item/")
     if request.method == 'POST':
+        if not isActiveSession(login_session):
+            flash("Error: not logged in.")
+            return render_template('itemDetail.html', item=item)
         if request.form['requestType'] == "edit":
             item.name = request.form['itemName']
             item.category_id = request.form['category_id']
@@ -83,6 +153,9 @@ def view_item(id):
 
 @app.route('/item/<int:id>/edit/')
 def view_item_edit(id):
+    if not isActiveSession(login_session):
+        flash("Error: You must be logged in.")
+        return redirect('/item/%s/' % id)
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
@@ -94,6 +167,9 @@ def view_item_edit(id):
 
 @app.route('/item/<int:id>/delete/')
 def view_item_delete(id):
+    if not isActiveSession(login_session):
+        flash("Error: You must be logged in.")
+        return redirect("/item/")
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
@@ -105,6 +181,9 @@ def view_item_delete(id):
 @app.route('/item/new/', methods=['POST', 'GET'])
 def view_item_new():
     if request.method == 'POST':
+        if not isActiveSession(login_session):
+            flash("Error: You must be logged in.")
+            return render_template('itemNew.html')
         newItem = Item(
             name=request.form['itemName'],
             description=request.form['description'],
