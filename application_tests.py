@@ -1,5 +1,4 @@
 import unittest
-
 from application import app, db, init_db
 import application as catalog
 from functools import update_wrapper

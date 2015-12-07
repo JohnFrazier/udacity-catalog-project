@@ -40,9 +40,10 @@ def make_json_response(response, code):
 @app.route('/fbconnect', methods=['POST'])
 def fb_oauth_request():
     user = None
-
+    user_info = {}
     # do not request real data if testing
-    if 'TESTING' in app.config.keys():
+    if app.config['TESTING'] is True:
+        print "testing enabled, not adding fb user"
         # and request.data == 'testytesttest':
         user_info = {'user_id': 42}
         for f in fb_user_info_fields:
@@ -55,24 +56,27 @@ def fb_oauth_request():
 
     else:
         if request.args.get('state') != login_session['state']:
+            print "fbconnect: bad state parameter"
             return make_json_response(json.dumps('invalid state parameter.'), 401)
 
-            # continue oauth flow
-            user_info = getUserDataFB(request)
-            if 'error' in user_info.keys:
-                return make_json_response(user_info['error'], 401)
+        # continue oauth flow
+        user_info = getUserDataFB(request)
+        if 'error' in user_info.keys():
+            return make_json_response(user_info['error'], 400)
 
     # oauth successful
 
     # check db for existing user
     try:
-        user = session.query(User).filter_by(user_info['email']).one()
+        user = session.query(User).filter_by(email=user_info['email']).one()
     except db.NoResultFound:
         # create a new user
         user = User()
-        # fill User obj assuming all fields from fb user info are in model
-        for f in fb_user_info_fields:
-            user[f] = user_info[f]
+        user.fb_id = user_info['facebook_id']
+        user.email = user_info['email']
+        user.picture = user_info['picture']
+        user.provider = user_info['provider']
+        user.name = user_info['username']
         session.add(user)
         session.commit()
 
@@ -206,4 +210,5 @@ if __name__ == '__main__':
     init_db('sqlite:///catalog.db')
     app.debug = True
     app.secret_key = "something_secret"
+    app.testing = False
     app.run(host='0.0.0.0', port=8008)
