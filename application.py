@@ -140,6 +140,9 @@ def view_item(id):
         if not isActiveSession(login_session):
             flash("Error: not logged in.")
             return render_template('itemDetail.html', item=item)
+        if not login_session['user_info']['user_id'] == item.user_id:
+            flash("Error: only the item owner can modify this item")
+            return redirect("/item/%s/" % id)
         if request.form['requestType'] == "edit":
             item.name = request.form['itemName']
             item.category_id = request.form['category_id']
@@ -165,20 +168,25 @@ def view_item_edit(id):
     except db.NoResultFound:
         flash("Item not found")
         return redirect("/item/")
-    else:
-        return render_template('itemEdit.html', item=item)
+    if not login_session['user_info']['user_id'] == item.user_id:
+        flash("Error: only the item owner can edit this item")
+        return redirect("/item/%s/" % id)
+    return render_template('itemEdit.html', item=item)
 
 
 @app.route('/item/<int:id>/delete/')
 def view_item_delete(id):
     if not isActiveSession(login_session):
         flash("Error: You must be logged in.")
-        return redirect("/item/")
+        return redirect("/item/%s/" % id)
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
         flash("Item not found")
         return redirect("/item/")
+    if not login_session['user_info']['user_id'] == item.user_id:
+        flash("Error: only the item owner can delete this item")
+        return redirect("/item/%s/" % id)
     return render_template('itemDelete.html', item=item)
 
 
@@ -191,7 +199,8 @@ def view_item_new():
         newItem = Item(
             name=request.form['itemName'],
             description=request.form['description'],
-            category_id=request.form['category_id'])
+            category_id=request.form['category_id'],
+            user_id=login_session['user_info']['user_id'])
         session.add(newItem)
         session.commit()
         flash("%s added to items." % newItem.name)
