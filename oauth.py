@@ -4,7 +4,7 @@ import string
 import random
 
 
-fb_user_info_fields = ('username', 'provider', 'email', 'fb_id', 'picture')
+fb_user_info_fields = ('name', 'provider', 'email', 'fb_id', 'picture')
 fb_client_secrets_path = 'secrets/fb_client_secrets.json'
 fb_access_url_base = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token'
 fb_basic_request_url_f = 'https://graph.facebook.com/v2.5/me?%s&fields=name,id,email'
@@ -54,7 +54,7 @@ def getUserDataFB(request):
     if not data:
         ret['error'] = "fb basic user request failed"
         return ret
-    ret['username'] = data['name']
+    ret['name'] = data['name']
     ret['email'] = data['email']
     ret['facebook_id'] = data['id']
 

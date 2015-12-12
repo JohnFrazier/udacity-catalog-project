@@ -49,13 +49,13 @@ def fb_oauth_request():
         login_session['state'] = 'testingstate'
         login_session['user_info'] = user_info
         flash("You are now logged in as %s" %
-              user_info['username'])
+              user_info['name'])
         user = User()
         user.fb_id = "12345"
         user.email = user_info['email']
         user.picture = user_info['picture']
         user.provider = user_info['provider']
-        user.name = user_info['username']
+        user.name = user_info['name']
         session.add(user)
         session.commit()
         # add id after .commit() assigns it
@@ -85,25 +85,42 @@ def fb_oauth_request():
         user.email = user_info['email']
         user.picture = user_info['picture']
         user.provider = user_info['provider']
-        user.name = user_info['username']
+        user.name = user_info['name']
         session.add(user)
         session.commit()
 
     user_info['user_id'] = user.id
 
     flash("You are now logged in as %s" %
-          user_info['username'])
+          user_info['name'])
 
     # add user to session
     login_session['user_info'] = user_info
     return make_json_response(json.dumps("ok"), 200)
 
 
-@app.route('/logout/')
+@app.route('/logout/', methods=['POST', 'GET'])
 def view_logout():
-    if not isActiveSession(login_session):
-        flash("Error: You are already logged out.")
-    return render_template('logout.html')
+    if request.method == 'POST':
+        if login_session['state'] == request.form['state']:
+            login_session.pop('state', None)
+            login_session.pop('user_info', None)
+            flash("You have successfully logged out")
+            return redirect("/")
+        else:
+            flash("Error: Post contained bad state")
+        return render_template(
+            'logout.html',
+            user_name=login_session['user_info']['name'],
+            state=login_session['state'])
+    else:
+        if not isActiveSession(login_session):
+            flash("Error: You are already logged out.")
+        print login_session['state']
+        return render_template(
+            'logout.html',
+            user_name=login_session['user_info']['name'],
+            state=login_session['state'])
 
 
 @app.route('/category/')
