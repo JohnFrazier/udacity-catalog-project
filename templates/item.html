@@ -3,11 +3,21 @@
 {% block title %}Items{% endblock %}
 
 {% block body %}
-<h2>Item list:</h2>
-<h4><ul>id, name, category_id, description</br></ul></h4>
-
-{% for i in items %}
-<div> {{ "%s %s %s %s" % (i.id, i.name, i.category_id, i.description) }} </div>
-{% endfor %}
-
+<div class="row col-md-12"><h2>Item list:</h2></div>
+<table class="table">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Category ID</th>
+        <th>Description</th>
+    </tr>
+    {% for i in items %}
+        <tr>
+            <td><a href={{ url_for('view_item', id=i.id) }}>{{ i.id }}</a></td>
+            <td>{{ i.name }}</td>
+            {% print i.category %}
+            <td>{{ i.description }}</td>
+        </tr>
+    {% endfor %}
+</table>
 {% endblock %}

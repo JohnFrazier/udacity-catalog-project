@@ -2,8 +2,14 @@
 {% block title %}Delete Item{% endblock %}
 
 {% block body %}
-<h2>Original content:</h2>
-<div>{{ "%s %s %s %s" % (item.id, item.name, item.category_id, item.description) }}</div>
+<div class="row"><h2>Original content:</h2></div>
+<div class="row">
+    <h3> <div class="name col-md-12">Item: {{ item.name }}</div></h3>
+    <div class="col-sm-4">Description: {{ item.description }}</div>
+    <div class="col-sm-2">ID: {{ item.id }}</div>
+    <div class="col-sm-2">Category: {{ item.category_id }}</div>
+</div>
+
 <div class="form">
     <form action="/item/{{item.id}}/" method="post">
         <input type="hidden" name="requestType" value="delete">

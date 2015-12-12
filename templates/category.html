@@ -3,9 +3,16 @@
 {% block title %}Category Detail{% endblock %}
 
 {% block body %}
-<h2>Category Detail:</h2>
-<h3>id, name</h3>
-<div>
-{{ "%s %s" % (category.id, category.name) }}
+<div class="row col-md-12"><h2>Category Detail:</h2></div>
+<div class="row">
+    <div class="col-sm-4">ID: {{ category.id }}</div>
+    <div class="col-sm-4">Name: {{ category.name }}</div>
+    <div class="col-sm-4">
+        {% if items != None %}
+            {% for i in items %}
+                <a href="{{ url_for('view_item', id=i.id) }}">{{ i.name }}</a>
+            {% endfor %}
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request
 from flask import flash, redirect, make_response
 from flask import session as login_session
-
 import database as db
 from models import Category, User, Item
 import json
@@ -45,13 +44,23 @@ def fb_oauth_request():
     if app.config['TESTING'] is True:
         print "testing enabled, not adding fb user"
         # and request.data == 'testytesttest':
-        user_info = {'user_id': 42}
         for f in fb_user_info_fields:
             user_info[f] = 'test_%s' % f
         login_session['state'] = 'testingstate'
         login_session['user_info'] = user_info
         flash("You are now logged in as %s" %
               user_info['username'])
+        user = User()
+        user.fb_id = "12345"
+        user.email = user_info['email']
+        user.picture = user_info['picture']
+        user.provider = user_info['provider']
+        user.name = user_info['username']
+        session.add(user)
+        session.commit()
+        # add id after .commit() assigns it
+        user_info['user_id'] = user.id
+
         return make_json_response(json.dumps("ok"), 200)
 
     else:
@@ -106,6 +115,17 @@ def view_category_list():
     return render_template('categories.html', categories=cats)
 
 
+@app.route('/user/<int:id>/')
+def view_user(id):
+    try:
+        user = session.query(User).filter_by(id=id).one()
+        items = session.query(Item).filter_by(user_id=id).all()
+    except db.NoResultFound:
+        items = None
+        user = None
+    return render_template('view_user.html', items=items, user=user)
+
+
 @app.route('/category/<int:id>/')
 def view_category(id):
     items = [None]
@@ -134,7 +154,18 @@ def view_item(id):
         item = session.query(Item).filter_by(
             id=id).one()
     except db.NoResultFound:
-        flash("Item not found")
+        flash("Error: Item not found")
+        return redirect("/item/")
+    try:
+        user = session.query(User).filter_by(id=item.user_id).one()
+    except db.NoResultFound:
+        flash("Error: User not found")
+    print item.name
+    print item.id
+    try:
+        user = session.query(User).filter_by(id=item.user_id).one()
+    except db.NoResultFound:
+        flash("Error: User not found")
         return redirect("/item/")
     if request.method == 'POST':
         if not isActiveSession(login_session):
@@ -155,7 +186,7 @@ def view_item(id):
             session.commit()
             flash("%s deleted" % item.name)
             return redirect("/item/")
-    return render_template('itemDetail.html', item=item)
+    return render_template('itemDetail.html', item=item, user=user)
 
 
 @app.route('/item/<int:id>/edit/')
@@ -166,7 +197,7 @@ def view_item_edit(id):
     try:
         item = session.query(Item).filter_by(id=id).one()
     except db.NoResultFound:
-        flash("Item not found")
+        flash("Error: Item not found")
         return redirect("/item/")
     if not login_session['user_info']['user_id'] == item.user_id:
         flash("Error: only the item owner can edit this item")
@@ -215,9 +246,12 @@ def init_db(path):
     engine, DBSession = db.init_db(path)
     session = DBSession()
 
+
 if __name__ == '__main__':
     init_db('sqlite:///catalog.db')
     app.debug = True
     app.secret_key = "something_secret"
     app.testing = False
+    session.add(Category(name="test"))
+    session.commit()
     app.run(host='0.0.0.0', port=8008)

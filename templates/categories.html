@@ -3,12 +3,17 @@
 {% block title %}Categories{% endblock %}
 
 {% block body %}
-<h2>Category list:</h2>
-<h3>id, name</h3>
-{% for c in categories %}
-<div>
-{{ "%s %s" % (c.id, c.name) }}
-</div>
-{% endfor %}
-
+    <div class="row col-md-12"><h2>Category list:</h2></div>
+    <table class="table">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+        </tr>
+        {% for i in categories %}
+            <tr>
+                <td><a href={{ url_for('view_category', id=i.id)}}>{{i.id}}</a></td>
+                <td>{{ i.name }}</td>
+            </tr>
+        {% endfor %}
+    </table>
 {% endblock %}

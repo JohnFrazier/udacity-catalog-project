@@ -3,20 +3,22 @@
 
 {% block body %}
 
-<h2>Create new item</h2>
+<div class="row"><h2>Create a new item</h2></div>
 
-<div class="form">
-    <form action="/item/new/" method="post">
-        <fieldset>
-            <legend>Item information</legend>
-            Item Name:<br>
-            <input type="text" name="itemName"><br>
-            Category id:<br>
-            <input type="text" name="category_id"><br>
-            Description:<br>
-            <input type="text" name="description"><br><br>
-            <button type="submit" id="submit" type="submit">Create</button>
-        </fieldset>
-    </form>
+<div class="row">
+    <div class="form">
+        <form action="{{ url_for('view_item_new') }}" method="post">
+            <fieldset>
+                <legend>Item information</legend>
+                Item Name:<br>
+                <input type="text" name="itemName"><br>
+                Category id:<br>
+                <input type="text" name="category_id"><br>
+                Description:<br>
+                <input type="text" name="description"><br><br>
+                <button type="submit" id="submit" type="submit">Create</button>
+            </fieldset>
+        </form>
+    </div>
 </div>
 {% endblock %}

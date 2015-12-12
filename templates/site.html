@@ -3,23 +3,27 @@
 
 <head>
 <title>Catalog - {% block title %}{% endblock %}</title>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap-theme.css') }}">
 </head>
 <body>
-{% block flash %}
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <div class=flash>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-{% endblock %}
+<div class="container">
+    {% block flash %}
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class=flash>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    {% endblock %}
 
-<div id=body>
-{% block body %}
-{% endblock %}
+    <div id=body>
+        {% block body %}
+        {% endblock %}
+    </div>
 </div>
 </body>
 </html>

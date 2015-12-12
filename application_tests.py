@@ -137,7 +137,12 @@ class PostTests(ApplicationTestCase):
         # get item for id
         item = catalog.session.query(catalog.Item).filter_by(
             name=data['itemName']).one()
+        print type(item.id)
+        print item.id
         ret = self.deleteItem(item.id)
+        if "rror" in ret.data:
+            print ret
+            print ret.data
         assert 'test_delItem deleted' in ret.data
 
     def test_editItem(self):
@@ -145,16 +150,17 @@ class PostTests(ApplicationTestCase):
         cat = catalog.Category(name="test_category")
         catalog.session.add(cat)
         cat_two = catalog.Category(name="second")
-        catalog.session.add(cat)
+        catalog.session.add(cat_two)
+        catalog.session.commit()  # this populates cat.id
         dataPre = dict(
             itemName="test_editItem_pre",
-            category_id=str(cat.id),
+            category_id=cat.id,
             description="change comes quickly for me")
 
         dataPost = dict(
             requestType="edit",
             itemName="test_editedItem",
-            category_id=str(cat_two.id),
+            category_id=cat_two.id,
             description="changes")
         # add a test item
         ret = self.createItem(dataPre)
