@@ -9,6 +9,7 @@
     <div class="col-sm-4">Name: {{ category.name }}</div>
     <div class="col-sm-4">
         {% if items != None %}
+        Members:
             {% for i in items %}
                 <a href="{{ url_for('view_item', id=i.id) }}">{{ i.name }}</a>
             {% endfor %}

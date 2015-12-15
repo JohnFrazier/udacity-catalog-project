@@ -116,9 +116,10 @@ class PostTests(ApplicationTestCase):
     def test_newItem(self):
         cat = catalog.Category(name="test_category")
         catalog.session.add(cat)
+        catalog.session.commit()
         data = dict(
             itemName="test_item",
-            category_id=str(cat.id),
+            category_id=str(cat.id),  # integers give a bad request error
             description="Just a fake post.")
         ret = self.createItem(data)
         assert 'test_item added' in ret.data
@@ -128,6 +129,7 @@ class PostTests(ApplicationTestCase):
         '''add and then delete an item'''
         cat = catalog.Category(name="test_category")
         catalog.session.add(cat)
+        catalog.session.commit()
         data = dict(
             itemName="test_delItem",
             category_id=str(cat.id),
@@ -137,8 +139,6 @@ class PostTests(ApplicationTestCase):
         # get item for id
         item = catalog.session.query(catalog.Item).filter_by(
             name=data['itemName']).one()
-        print type(item.id)
-        print item.id
         ret = self.deleteItem(item.id)
         if "rror" in ret.data:
             print ret

@@ -11,7 +11,7 @@
 </div>
 </div>
 {% if items != None %}
-    <div class="row"><h2>Items:</h2></div>
+    <div class="row"><h3>Items:</h3></div>
     <div class="row">
         {% for i in items %}
             <a href={{url_for('view_item', id=i.id)}}>{{ i.name }}</a>

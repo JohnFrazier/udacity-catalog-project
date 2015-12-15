@@ -42,7 +42,7 @@ def fb_oauth_request():
     user_info = {}
     # do not request real data if testing
     if app.config['TESTING'] is True:
-        print "testing enabled, not adding fb user"
+        print "testing enabled, adding fake fb user"
         # and request.data == 'testytesttest':
         for f in fb_user_info_fields:
             user_info[f] = 'test_%s' % f
@@ -116,7 +116,6 @@ def view_logout():
     else:
         if not isActiveSession(login_session):
             flash("Error: You are already logged out.")
-        print login_session['state']
         return render_template(
             'logout.html',
             user_name=login_session['user_info']['name'],
@@ -177,8 +176,6 @@ def view_item(id):
         user = session.query(User).filter_by(id=item.user_id).one()
     except db.NoResultFound:
         flash("Error: User not found")
-    print item.name
-    print item.id
     try:
         user = session.query(User).filter_by(id=item.user_id).one()
     except db.NoResultFound:

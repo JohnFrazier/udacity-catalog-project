@@ -7,18 +7,18 @@
         <h1> <div class="name col-md-12">Item: {{ item.name }}</div></h1>
     </div>
     <div class="row">
-        <div class="col-sm-4">Description: {{ item.description }}</div>
         <div class="col-sm-2">ID: {{ item.id }}</div>
-        <div class="col-sm-2">
-            Category: <a href="{{ url_for('view_category', id=item.category_id) }}">
-                {{ item.category_id }}</a></div>
         <div class="col-sm-4">Owner: <a href={{ url_for('view_user', id='1') }}>
                 {{ user.name }}</a></div>
+        <div class="col-sm-2">
+            Category: <a href="{{ url_for('view_category', id=item.category_id) }}">
+                {{ item.category.name }}</a></div>
+        <div class="col-sm-4">Description: {{ item.description }}</div>
     </div>
     <div class="row">
-        <div class="col-sm-6"><a href={{ url_for('view_item_edit', id=item.id) }}>
-                Edit</a></div>
-        <div class="col-sm-6"><a href={{ url_for('view_item_delete', id=item.id) }}>
-                Delete</a></div>
+        <div class="col-sm-3"><a href={{ url_for('view_item_edit', id=item.id) }}>
+                Edit this item</a></div>
+        <div class="col-sm-3"><a href={{ url_for('view_item_delete', id=item.id) }}>
+                Delete this item</a></div>
     </div>
 {% endblock %}
