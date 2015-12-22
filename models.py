@@ -13,12 +13,18 @@ class User(Base):
     provider = Column(String(250))
     fb_id = Column(String(250))
 
+    def as_dict(self):
+        return dict(id=self.id, name=self.name)
+
 
 # item categories
 class Category(Base):
     __tablename__ = 'categories'
     id = Column(Integer, primary_key=True)
     name = Column(String(80), nullable=False)
+
+    def as_dict(self):
+        return dict(id=self.id, name=self.name)
 
 
 # items within the category
@@ -31,3 +37,6 @@ class Item(Base):
     category = relationship(Category)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     user = relationship(User)
+
+    def as_dict(self):
+        return dict(id=self.id, name=self.name)

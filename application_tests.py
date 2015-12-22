@@ -1,5 +1,5 @@
 import unittest
-from application import app, db, init_db
+from application import app, init_db
 import application as catalog
 from functools import update_wrapper
 
@@ -119,7 +119,7 @@ class PostTests(ApplicationTestCase):
         catalog.session.commit()
         data = dict(
             itemName="test_item",
-            category_id=str(cat.id),  # integers give a bad request error
+            category_id=str(cat.id),  # integers result in a bad request error
             description="Just a fake post.")
         ret = self.createItem(data)
         assert 'test_item added' in ret.data
@@ -136,7 +136,7 @@ class PostTests(ApplicationTestCase):
             description="death comes quickly for me")
         ret = self.createItem(data)
         assert 'test_delItem added' in ret.data
-        # get item for id
+        # fetch the item for the id
         item = catalog.session.query(catalog.Item).filter_by(
             name=data['itemName']).one()
         ret = self.deleteItem(item.id)
@@ -176,6 +176,7 @@ class PostTests(ApplicationTestCase):
             data=dataPost,
             follow_redirects=True)
         assert '%s updated' % dataPost['itemName'] in ret.data
+
 
 if __name__ == '__main__':
     unittest.main()

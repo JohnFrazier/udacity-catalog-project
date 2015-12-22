@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request
-from flask import flash, redirect, make_response
+from flask import flash, get_flashed_messages
+from flask import redirect, make_response
 from flask import session as login_session
 import database as db
-from models import Category, User, Item
-import json
+from models import Category, User, Item, Base
 from oauth import generateStateString, getUserDataFB
 from oauth import fb_user_info_fields
-
+from flask import json, jsonify
 app = Flask(__name__)
 engine = None
 DBSession = None
@@ -19,6 +19,26 @@ def check_active_session(login_session):
     else:
         flash("Error user not logged in.")
         return False
+
+
+def resp_to_json(resp, messages):
+    '''translate a dictionary including postgres models for jsonify'''
+    ret = dict()
+    print resp
+    for k, v in resp.items():
+        if k == 'html':
+            print '** skipped %s' % k
+            pass
+        elif isinstance(v, Base):
+            print "++ %s" % k
+            ret[k] = v.as_dict()
+        elif isinstance(v, list):
+            ret[k] = [i.as_dict() for i in v if i is not None]
+        else:
+            print "-- not %s" % k
+            ret[k] = v
+    ret['messages'] = messages
+    return ret
 
 
 @app.route('/')
@@ -130,11 +150,15 @@ def view_logout():
 
 @app.route('/category/')
 def view_category_list():
+    resp = dict(error=False, categories=[None])
     try:
-        cats = session.query(Category).all()
+        resp['categories'] = session.query(Category).all()
     except db.NoResultFound:
         flash("No categories available.")
-    return render_template('categories.html', categories=cats)
+    if request.headers['Content-Type'] == 'application/json':
+        return jsonify(resp_to_json(resp, get_flashed_messages()))
+    else:
+        return render_template('categories.html', categories=resp['categories'])
 
 
 @app.route('/user/<int:id>/')
@@ -145,27 +169,33 @@ def view_user(id):
         resp['items'] = session.query(Item).filter_by(user_id=id).all()
     except db.NoResultFound:
         flash("Error: User not found")
-        resp['html'] = redirect('/user/')
         resp['error'] = True
+    if request.headers['Content-Type'] == 'application/json':
+        return jsonify(resp_to_json(resp, get_flashed_messages()))
     if not resp['error']:
         resp['html'] = render_template(
             'view_user.html', items=resp['items'], user=resp['user'])
-    return resp['html']
+    else:
+        resp['html'] = redirect('/')
+        return resp['html']
 
 
 @app.route('/category/<int:id>/')
 def view_category(id):
-    resp = dict(items=[None], cat=None, error=False)
+    resp = dict(items=[None], category=None, error=False)
     try:
-        resp['cat'] = session.query(Category).filter_by(id=id).one()
-        resp['items'] = session.query(Item).filter_by(category_id=id)
+        resp['category'] = session.query(Category).filter_by(id=id).one()
+        resp['items'] = session.query(Item).filter_by(category_id=id).all()
     except db.NoResultFound:
-        flash("Category not found")
-        resp['html'] = redirect('/category/')
+        flash("Error: Category not found")
         resp['error'] = True
+    if request.headers['Content-Type'] == 'application/json':
+        return jsonify(resp_to_json(resp, get_flashed_messages()))
     if not resp['error']:
         resp['html'] = render_template(
-            'category.html', category=resp['cat'], items=resp['items'])
+            'category.html', category=resp['category'], items=resp['items'])
+    else:
+        resp['html'] = redirect('/category/')
     return resp['html']
 
 
@@ -176,6 +206,8 @@ def view_items():
         resp['items'] = session.query(Item).all()
     except db.NoResultFound:
         flash("No items available")
+    if request.headers['Content-Type'] == 'application/json':
+        return jsonify(resp_to_json(resp, get_flashed_messages()))
     resp['html'] = render_template('item.html', items=resp['items'])
     return resp['html']
 
@@ -189,27 +221,30 @@ def view_item(id):
     except db.NoResultFound:
         flash("Error: Item not found")
         resp['error'] = True
-        resp['html'] = redirect('/item/')
     if request.method == 'POST':
-        if check_active_session(login_session):
-            if not login_session['user_info']['user_id'] == resp['item'].user_id:
-                flash("Error: only the item owner can modify this item")
-                resp['error'] = True
-            else:
-                if request.form['requestType'] == "edit":
-                    resp['item'].name = request.form['itemName']
-                    resp['item'].category_id = request.form['category_id']
-                    resp['item'].description = request.form['description']
-                    session.add(resp['item'])
-                    session.commit()
-                    flash("%s updated." % resp['item'].name)
-                elif request.form['requestType'] == "delete":
-                    session.delete(resp['item'])
-                    session.commit()
-                    flash("%s deleted" % resp['item'].name)
-                    resp['html'] = redirect('/item/')
+        if check_active_session(login_session) and \
+                login_session['user_info']['user_id'] == resp['item'].user_id:
+            if request.form['requestType'] == "edit":
+                resp['item'].name = request.form['itemName']
+                resp['item'].category_id = request.form['category_id']
+                resp['item'].description = request.form['description']
+                session.add(resp['item'])
+                session.commit()
+                flash("%s updated." % resp['item'].name)
+            elif request.form['requestType'] == "delete":
+                session.delete(resp['item'])
+                session.commit()
+                flash("%s deleted" % resp['item'].name)
+                resp['html'] = redirect('/item/')
+        else:
+            flash("Error: only the item owner can modify this item")
+            resp['error'] = True
+    if request.headers['Content-Type'] == 'application/json':
+        return jsonify(resp_to_json(resp, get_flashed_messages()))
     if not resp['error'] and 'html' not in resp.keys():
         resp['html'] = render_template('itemDetail.html', item=resp['item'])
+    else:
+        resp['html'] = redirect('/item/')
     return resp['html']
 
 
@@ -223,8 +258,6 @@ def view_item_edit(id):
         except db.NoResultFound:
             flash("Error: Item not found")
             resp['error'] = True
-        if resp['error']:
-            resp['html'] = redirect("/item/")
         else:
             if login_session['user_info']['user_id'] == resp['item'].user_id:
                 resp['html'] = render_template('itemEdit.html', item=resp['item'])
@@ -251,7 +284,8 @@ def view_item_delete(id):
             resp['html'] = redirect("/item/")
         else:
             if login_session['user_info']['user_id'] == resp['item'].user_id:
-                resp['html'] = render_template('itemDelete.html', item=resp['item'])
+                resp['html'] = render_template(
+                    'itemDelete.html', item=resp['item'])
             else:
                 resp['error'] = True
                 resp['html'] = redirect("/item/%s/" % id)
