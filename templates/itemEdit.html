@@ -2,29 +2,32 @@
 {% block title %}Edit Item{% endblock %}
 
 {% block body %}
-<div class="row"><h2>{{ "Edit Item \"%s\"" % item.name }}</h2></div>
-<br>
-<div class="row"><h4>Original content:</h4></div>
-<div class="row">
-    <div class="col-sm-1">ID: {{ item.id }}</div>
-    <div class="name col-sm-4">Item: {{ item.name }}</div>
-    <div class="col-sm-3">Category: {{ item.category_id }}: {{ item.category.name }}</div>
-    <div class="col-sm-4">Description: {{ item.description }}</div>
+<div class="pure-g pure-u-1"><h2>{{ "Edit Item \"%s\"" % item.name }}</h2></div>
+<div class="pure-g pure-u-1"><h4>Original content:</h4></div>
+<div class="pure-g pure-u-1">
+    <div class="pure-u-1-5">ID: {{ item.id }}</div>
+    <div class="pure-u-1-4">Item: {{ item.name }}</div>
+    <div class="pure-u-1-4">Category: {{ item.category.name }}</div>
+    <div class="pure-u-1-4">Description: {{ item.description }}</div>
 </div>
-</br>
-<div class="form">
-    <form action="{{ url_for('view_item', id=item.id) }}" method="post">
-        <input type="hidden" name="requestType" value="edit">
-        <fieldset>
-            <legend>Item information</legend>
-            Item Name:<br>
-            <input type="text" name="itemName" value="{{item.name}}"><br>
-            Category ID:<br>
-            <input type="text" name="category_id" value="{{item.category_id}}"><br>
-            Description:<br>
-            <input type="text" name="description" value="{{item.description}}"><br><br>
-            <button type="submit" id="submit" type="submit">Create</button>
-        </fieldset>
-    </form>
-</div>
+<div class="pure-g pure-u-1"><br></div>
+<form class="pure-form pure-g pure-u-1" action="{{ url_for('view_item', id=item.id) }}" method="post">
+    <input type="hidden" name="requestType" value="edit">
+    <fieldset>
+        <legend>Enter new information</legend>
+        Item Name:<br>
+        <input type="text" name="itemName" value="{{item.name}}"><br>
+        Category:<br>
+        <input type="text" name="category" list="categories" value="{{item.category.name}}"><br>
+        <datalist id="categories">
+            {% for c in cats %}
+            <option value={{ c.name }}>
+            {% endfor %}
+        </datalist>
+
+        Description:<br>
+        <input type="text" name="description" value="{{item.description}}"><br><br>
+        <button type="submit" id="submit" type="submit">Update</button>
+    </fieldset>
+</form>
 {% endblock %}

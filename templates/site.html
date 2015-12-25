@@ -3,27 +3,53 @@
 
 <head>
 <title>Catalog - {% block title %}{% endblock %}</title>
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap-theme.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='pure-release-0.6.0/pure-min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='pure-release-0.6.0/grids-responsive-min.css') }}">
 </head>
 <body>
-<div class="container">
+<div>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<div class="header">
+    <div class="pure-menu pure-menu-horizontal">
+        <a class="pure-menu-heading pure-menu-link" href="{{ url_for('view_main') }}">Main</a>
+        <ul class="pure-menu-list">
+            <li class="pure-menu-item">
+                <a class="pure-menu-link" href="{{ url_for('view_items') }}">Items</a>
+            </li>
+            <li class="pure-menu-item">
+                <a class="pure-menu-link" href="{{ url_for('view_category_list') }}">Categories</a>
+            </li>
+            {% if 'user_info' in login_session.keys() %}
+                <li class="pure-menu-item">
+                    <a class="pure-menu-link" href="{{ url_for('view_logout') }}">Logout</a>
+                </li>
+            {% else %}
+                <li class="pure-menu-item">
+                    <a class="pure-menu-link" href="{{ url_for('view_login') }}">Login</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+
+<div class="pure-g pure-u-1">
     {% block flash %}
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-                <div class=flash>
                 {% for message in messages %}
-                    <li>{{ message }}</li>
+                    <div class="pure-g pure-u-1">
+                        <li>{{ message }}</li>
+                    </div>
                 {% endfor %}
-                </div>
             {% endif %}
         {% endwith %}
     {% endblock %}
-
-    <div id=body>
-        {% block body %}
-        {% endblock %}
-    </div>
+</div>
+<div class="pure-g pure-u-1">
+    {% block body %}
+    {% endblock %}
+</div>
 </div>
 </body>
 </html>

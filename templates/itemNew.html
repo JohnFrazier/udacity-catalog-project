@@ -3,22 +3,26 @@
 
 {% block body %}
 
-<div class="row"><h2>Create a new item</h2></div>
+<div class="pure-g pure-u-1"><h2>Create a new item</h2></div>
 
-<div class="row">
-    <div class="form">
-        <form action="{{ url_for('view_item_new') }}" method="post">
-            <fieldset>
-                <legend>Item information</legend>
-                Item Name:<br>
-                <input type="text" name="itemName"><br>
-                Category id:<br>
-                <input type="text" name="category_id"><br>
-                Description:<br>
-                <input type="text" name="description"><br><br>
-                <button type="submit" id="submit" type="submit">Create</button>
-            </fieldset>
-        </form>
-    </div>
+<div class="pure-g pure-u-1">
+    <form class="pure-form" action="{{ url_for('view_item_new') }}" method="post">
+        <fieldset>
+            <legend>Item information</legend>
+            Item Name:<br>
+            <input type="text" name="itemName"><br>
+            Category:<br>
+            <input type="text" name="category" list="categories"><br>
+            <datalist id="categories">
+                {% for c in cats %}
+                <option value={{ c.name }}>
+                {% endfor %}
+            </datalist>
+
+            Description:<br>
+            <input type="text" name="description"><br><br>
+            <button type="submit" id="submit" type="submit">Create</button>
+        </fieldset>
+    </form>
 </div>
 {% endblock %}

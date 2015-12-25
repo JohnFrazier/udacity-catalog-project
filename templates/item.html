@@ -3,29 +3,40 @@
 {% block title %}Items{% endblock %}
 
 {% block body %}
-<div class="row col-md-12"><h2>Item list:</h2></div>
-<table class="table">
-    <tr>
-        <th>ID</th>
-        <th>Owner</th>
-        <th>Name</th>
-        <th>Category</th>
-        <th>Description</th>
-    </tr>
-    {% if items != None %}
-        {% for i in items %}
+<div class="pure-g">
+    <div class="pure-u-1"><a href={{url_for("view_item_new")}}>Add Item</a></div>
+</div>
+<div class="pure-g">
+    <div class="pure-u-1"><h2>Item list:</h2></div>
+</div>
+<div class="pure-g pure-u-1">
+    <table class="pure-table pure-table-striped">
+        <thead>
             <tr>
-                <td><a href={{ url_for('view_item', id=i.id) }}>{{
-                    i.id }}</a></td>
-                <td><a href={{ url_for('view_user', id=i.user.id) }}>
-                        {{ i.user.name }}</a></td>
-                <td>{{ i.name }}</td>
-                <td><a href={{ url_for(
-                    'view_category', id=i.category_id)
-                    }}>{{ i.category.name }}</a> </td>
-                <td>{{ i.description }}</td>
+                <th>ID</th>
+                <th>Owner</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Description</th>
             </tr>
-        {% endfor %}
-    {% endif %}
-</table>
+        </thead>
+        </tbody>
+            {% if items != None %}
+                {% for i in items %}
+                    <tr>
+                        <td><a href={{ url_for('view_item', id=i.id) }}>{{
+                            i.id }}</a></td>
+                        <td><a href={{ url_for('view_user', id=i.user.id) }}>
+                                {{ i.user.name }}</a></td>
+                        <td>{{ i.name }}</td>
+                        <td><a href={{ url_for(
+                            'view_category', id=i.category_id)
+                            }}>{{ i.category.name }}</a> </td>
+                        <td>{{ i.description }}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

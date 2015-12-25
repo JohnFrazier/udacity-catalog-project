@@ -114,12 +114,9 @@ class PostTests(ApplicationTestCase):
             follow_redirects=True)
 
     def test_newItem(self):
-        cat = catalog.Category(name="test_category")
-        catalog.session.add(cat)
-        catalog.session.commit()
         data = dict(
             itemName="test_item",
-            category_id=str(cat.id),  # integers result in a bad request error
+            category="test category",
             description="Just a fake post.")
         ret = self.createItem(data)
         assert 'test_item added' in ret.data
@@ -127,18 +124,18 @@ class PostTests(ApplicationTestCase):
 
     def test_delItem(self):
         '''add and then delete an item'''
-        cat = catalog.Category(name="test_category")
-        catalog.session.add(cat)
-        catalog.session.commit()
         data = dict(
             itemName="test_delItem",
-            category_id=str(cat.id),
+            category="test_category",
             description="death comes quickly for me")
         ret = self.createItem(data)
         assert 'test_delItem added' in ret.data
         # fetch the item for the id
         item = catalog.session.query(catalog.Item).filter_by(
             name=data['itemName']).one()
+        assert item.name == data['itemName']
+        assert item.description == data['description']
+        assert item.category.name == data['category']
         ret = self.deleteItem(item.id)
         if "rror" in ret.data:
             print ret
@@ -147,27 +144,21 @@ class PostTests(ApplicationTestCase):
 
     def test_editItem(self):
         '''create and then edit a item'''
-        cat = catalog.Category(name="test_category")
-        catalog.session.add(cat)
-        cat_two = catalog.Category(name="second")
-        catalog.session.add(cat_two)
-        catalog.session.commit()  # this populates cat.id
         dataPre = dict(
             itemName="test_editItem_pre",
-            category_id=cat.id,
+            category="test_cat_pre_edit",
             description="change comes quickly for me")
 
         dataPost = dict(
             requestType="edit",
             itemName="test_editedItem",
-            category_id=cat_two.id,
+            category="test_cat_post_edit",
             description="changes")
         # add a test item
         ret = self.createItem(dataPre)
         # find the item id
-        qret = catalog.session.query(catalog.Item).filter_by(
-            name=dataPre['itemName'])
-        item = qret.one()
+        item = catalog.session.query(catalog.Item).filter_by(
+            name=dataPre['itemName']).one()
         assert 'test_editItem_pre added' in ret.data
 
         # update by id

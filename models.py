@@ -1,5 +1,5 @@
 from sqlalchemy import Column, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from database import Base
 
 
@@ -17,26 +17,26 @@ class User(Base):
         return dict(id=self.id, name=self.name)
 
 
-# item categories
-class Category(Base):
-    __tablename__ = 'categories'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(80), nullable=False)
-
-    def as_dict(self):
-        return dict(id=self.id, name=self.name)
-
-
 # items within the category
 class Item(Base):
     __tablename__ = 'items'
     id = Column(Integer, primary_key=True)
     name = Column(String(80), nullable=False)
     description = Column(String(250), nullable=False)
-    category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
-    category = relationship(Category)
+    category_id = Column(Integer, ForeignKey('categories.id'))
+    category = relationship("Category", backref=backref("items"))
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship(User)
+    user = relationship(User, backref=backref("items"))
+
+    def as_dict(self):
+        return dict(id=self.id, name=self.name)
+
+
+# item categories
+class Category(Base):
+    __tablename__ = 'categories'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(80), nullable=False)
 
     def as_dict(self):
         return dict(id=self.id, name=self.name)
