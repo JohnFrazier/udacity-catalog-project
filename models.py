@@ -14,7 +14,10 @@ class User(Base):
     fb_id = Column(String(250))
 
     def as_dict(self):
-        return dict(id=self.id, name=self.name)
+        return dict(
+            id=self.id,
+            name=self.name,
+            provider=self.provider)
 
 
 # items within the category
@@ -29,7 +32,11 @@ class Item(Base):
     user = relationship(User, backref=backref("items"))
 
     def as_dict(self):
-        return dict(id=self.id, name=self.name)
+        return dict(
+            id=self.id,
+            name=self.name,
+            category_id=self.category_id,
+            category=self.category.name)
 
 
 # item categories

@@ -14,6 +14,7 @@ session = None
 
 
 def check_active_session(login_session):
+    '''check for session status and error if not'''
     if 'user_info' in login_session.keys():
         return True
     else:
@@ -44,12 +45,14 @@ def view_main():
 
 @app.route('/login/')
 def view_login():
+    '''show login page'''
     state = generateStateString()
     login_session['state'] = state
     return render_template('login.html', login_session=login_session)
 
 
 def make_json_response(response, code):
+    '''give json response the proper headers'''
     resp = make_response(response, code)
     resp.headers['Content-Type'] = 'application/json'
     return resp
@@ -57,6 +60,7 @@ def make_json_response(response, code):
 
 @app.route('/fbconnect', methods=['POST'])
 def fb_oauth_request():
+    '''handle facebook oauth requests'''
     user = None
     user_info = {}
     # do not request real data if testing
@@ -121,6 +125,7 @@ def fb_oauth_request():
 
 @app.route('/logout/', methods=['POST', 'GET'])
 def view_logout():
+    '''show logout form and handle its requests'''
     resp = dict(error=False)
     if request.method == 'POST':
         if login_session['state'] == request.form['state']:
@@ -147,6 +152,7 @@ def view_logout():
 
 @app.route('/category/')
 def view_category_list():
+    '''show a list of categories'''
     resp = dict(error=False, categories=[None])
     try:
         resp['categories'] = session.query(Category).all()
@@ -163,7 +169,8 @@ def view_category_list():
 
 @app.route('/user/<int:id>/')
 def view_user(id):
-    resp = dict(user=None, items=None, error=False)
+    '''show user details'''
+    resp = dict(user=None, error=False)
     resp['user'] = session.query(User).get(id)
     if not resp['user']:
         flash("Error: User not found")
@@ -182,6 +189,7 @@ def view_user(id):
 
 @app.route('/category/<int:id>/')
 def view_category(id):
+    '''show category details'''
     resp = dict(items=[None], category=None, error=False)
     resp['category'] = session.query(Category).get(id)
     if not resp['category']:
@@ -201,6 +209,7 @@ def view_category(id):
 
 @app.route('/item/')
 def view_items():
+    '''show a list of items in the db'''
     resp = dict(items=None)
     try:
         resp['items'] = session.query(Item).all()
@@ -216,23 +225,33 @@ def view_items():
     return resp['html']
 
 
-@app.route('/item/<int:id>/', methods=['POST', 'GET'])
-def view_item(id):
-    resp = dict(item=None, error=False)
-    resp['item'] = session.query(Item).get(id)
-    if not resp['item']:
-        flash("Error: Item not found")
-        resp['error'] = True
-    if request.method == 'POST':
-        if check_active_session(login_session) and \
-                login_session['user_info']['user_id'] == resp['item'].user_id:
+@app.route('/item/<int:id>/', methods=['POST'])
+def view_item_post(id):
+    '''handle post requests for an item'''
+    if check_active_session(login_session) and \
+            'user_info' in login_session.keys():
+        resp = dict(item=None, error=False)
+        resp['item'] = session.query(Item).get(id)
+        if not resp['item']:
+            flash("Error: Item not found")
+            resp['error'] = True
+            resp['html'] = redirect('/item/')
+        # ensure logged in user owns the item
+        if login_session['user_info']['user_id'] == resp['item'].user_id:
             if request.form['requestType'] == "edit":
-                print request.form
+                # add new category
                 try:
                     cat = session.query(Category).filter_by(name=request.form['category']).one()
                 except db.NoResultFound:
                     cat = Category(name=request.form['category'])
                     session.add(cat)
+                # remove unused category
+                cat_n = session.query(Category).\
+                    filter_by(name=resp['item'].category.name).\
+                    count()
+                if cat_n == 1:
+                    session.delete(resp['item'].category)
+                # update item
                 resp['item'].category = cat
                 resp['item'].name = request.form['itemName']
                 resp['item'].description = request.form['description']
@@ -240,6 +259,13 @@ def view_item(id):
                 session.commit()
                 flash("%s updated." % resp['item'].name)
             elif request.form['requestType'] == "delete":
+                # remove unused category
+                cat_n = session.query(Category).\
+                    filter_by(name=resp['item'].category.name).\
+                    count()
+                if cat_n == 1:
+                    session.delete(resp['item'].category)
+                # remove item
                 session.delete(resp['item'])
                 session.commit()
                 flash("%s deleted" % resp['item'].name)
@@ -247,30 +273,57 @@ def view_item(id):
         else:
             flash("Error: only the item owner can modify this item")
             resp['error'] = True
-    if request.headers['Content-Type'] == 'application/json':
-        return jsonify(resp_to_json(resp, get_flashed_messages()))
+    else:
+        flash("Error: You are not logged in")
+        resp['html'] = redirect('/login/')
     if not resp['error'] and 'html' not in resp.keys():
         resp['html'] = render_template(
             'itemDetail.html',
             login_session=login_session,
             item=resp['item'])
     else:
+        resp['html'] = redirect('/item/')
+    return resp['html']
 
+
+@app.route('/item/<int:id>/', methods=['GET'])
+def view_item(id):
+    '''show item details'''
+    resp = dict(item=None, error=False)
+    # get item
+    resp['item'] = session.query(Item).get(id)
+    if not resp['item']:
+        flash("Error: Item not found")
+        resp['error'] = True
+    # return as json if requested
+    if request.headers['Content-Type'] == 'application/json':
+        return jsonify(resp_to_json(resp, get_flashed_messages()))
+    # build html if item was found
+    if not resp['error'] and 'html' not in resp.keys():
+        resp['html'] = render_template(
+            'itemDetail.html',
+            login_session=login_session,
+            item=resp['item'])
+    else:
         resp['html'] = redirect('/item/')
     return resp['html']
 
 
 @app.route('/item/<int:id>/edit/')
 def view_item_edit(id):
+    '''show item editing form'''
     resp = dict(item=None, error=False)
     resp['error'] = False
-    if check_active_session(login_session):
+    # ensure session is active
+    if check_active_session(login_session) and \
+            'user_info' in login_session.keys():
         resp['item'] = session.query(Item).get(id)
         if not resp['item']:
             flash("Error: Item not found")
             resp['error'] = True
             resp['html'] = redirect('/item/')
         else:
+            # check login status before sending template
             if login_session['user_info']['user_id'] == resp['item'].user_id:
                 resp['html'] = render_template(
                     'itemEdit.html',
@@ -282,6 +335,7 @@ def view_item_edit(id):
                 resp['html'] = redirect('/item/%s/' % id)
                 flash("error: only the item owner can edit this item")
     else:
+        flash("Error: you are not logged in")
         resp['html'] = redirect('/login')
 
     return resp['html']
@@ -289,8 +343,12 @@ def view_item_edit(id):
 
 @app.route('/item/<int:id>/delete/')
 def view_item_delete(id):
+    '''show a form for deleting an item'''
     resp = dict(item=None, error=False)
-    if check_active_session(login_session):
+    # check session status and user is logged in
+    if check_active_session(login_session) and \
+            'user_info' in login_session.keys():
+        # try to fetch the item
         resp['item'] = session.query(Item).get(id)
         if not resp['item']:
             flash("Item not found")
@@ -298,6 +356,7 @@ def view_item_delete(id):
         if resp['error']:
             resp['html'] = redirect("/item/")
         else:
+            # ensure user has logged in before sending template
             if login_session['user_info']['user_id'] == resp['item'].user_id:
                 resp['html'] = render_template(
                     'itemDelete.html',
@@ -309,24 +368,29 @@ def view_item_delete(id):
                 flash("Error: only the item owner can delete this item")
     else:
         resp['html'] = redirect('/login')
-
     return resp['html']
 
 
 @app.route('/item/new/', methods=['POST'])
 def view_item_new_post():
+    '''handle new item requests'''
     resp = dict()
-    if check_active_session(login_session):
+    # ensure user is logged in and session is active
+    if check_active_session(login_session) and \
+            'user_info' in login_session.keys():
+        # add category if needed
         try:
             new_cat = session.query(Category).filter_by(name=request.form['category']).one()
         except db.NoResultFound:
             new_cat = Category(name=request.form['category'])
             session.add(new_cat)
+        # create item
         new_item = Item(
             name=request.form['itemName'],
             category=new_cat,
             description=request.form['description'],
             user_id=login_session['user_info']['user_id'])
+        # update db
         session.add(new_item)
         session.commit()
         flash("%s added to items." % new_item.name)
@@ -338,20 +402,28 @@ def view_item_new_post():
 
 @app.route('/item/new/', methods=['GET'])
 def view_item_new():
-    check_active_session(login_session)
-    return render_template(
-        'itemNew.html',
-        cats=session.query(Category).all(),
-        login_session=login_session)
+    '''show new item form'''
+    # ensure user is logged in
+    if check_active_session(login_session) and \
+            'user_info' in login_session.keys():
+        return render_template(
+            'itemNew.html',
+            cats=session.query(Category).all(),
+            login_session=login_session)
+    else:
+        flash("Error: you are not logged in")
+        return redirect('/login/')
 
 
 def init_db(path):
+    '''initialize database and session'''
     global engine, DBSession, session
     engine, DBSession = db.init_db(path)
     session = DBSession()
 
 
 def init_app():
+    '''initialize debug application'''
     init_db('sqlite:///catalog.db')
     app.debug = True
     app.secret_key = "something_secret"
