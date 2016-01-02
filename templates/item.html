@@ -14,6 +14,7 @@
         <thead>
             <tr>
                 <th>ID</th>
+                <th>Image</th>
                 <th>Owner</th>
                 <th>Name</th>
                 <th>Category</th>
@@ -26,6 +27,10 @@
                     <tr>
                         <td><a href={{ url_for('view_item', id=i.id) }}>{{
                             i.id }}</a></td>
+                        <td>
+                            <img src="{{ url_for('uploaded_file', filename=i.image.filename) }}"
+                                alt="{{ i.image.original_name }}"
+                                style="width:30px;height:30px"></td>
                         <td><a href={{ url_for('view_user', id=i.user.id) }}>
                                 {{ i.user.name }}</a></td>
                         <td>{{ i.name }}</td>

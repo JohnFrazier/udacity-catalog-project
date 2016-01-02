@@ -3,6 +3,11 @@
 
 {% block body %}
 <div class="pure-g pure-u-1"><h2>{{ "Edit Item \"%s\"" % item.name }}</h2></div>
+<div class="pure-g pure-u-1">
+    <img src="{{ url_for('uploaded_file', filename=item.image.filename) }}"
+        alt="{{ item.image.original_name }}"
+        style="width:100px;height:100px"></td>
+</div>
 <div class="pure-g pure-u-1"><h4>Original content:</h4></div>
 <div class="pure-g pure-u-1">
     <div class="pure-u-1-5">ID: {{ item.id }}</div>
@@ -11,7 +16,8 @@
     <div class="pure-u-1-4">Description: {{ item.description }}</div>
 </div>
 <div class="pure-g pure-u-1"><br></div>
-<form class="pure-form pure-g pure-u-1" action="{{ url_for('view_item', id=item.id) }}" method="post">
+<form class="pure-form pure-g pure-u-1" action="{{ url_for('view_item', id=item.id) }}"
+    enctype="multipart/form-data" method="post">
     <input type="hidden" name="requestType" value="edit">
     <fieldset>
         <legend>Enter new information</legend>
@@ -26,7 +32,8 @@
         </datalist>
 
         Description:<br>
-        <input type="text" name="description" value="{{item.description}}"><br><br>
+        <input type="text" name="description" value="{{item.description}}"><br>
+        <input type="file" name="image" accept="image/png|image/jpeg"><br><br>
         <button type="submit" id="submit" type="submit">Update</button>
     </fieldset>
 </form>

@@ -6,7 +6,8 @@
 <div class="pure-g pure-u-1"><h2>Create a new item</h2></div>
 
 <div class="pure-g pure-u-1">
-    <form class="pure-form" action="{{ url_for('view_item_new') }}" method="post">
+    <form class="pure-form" action="{{ url_for('view_item_new') }}" 
+        enctype="multipart/form-data" method="post">
         <fieldset>
             <legend>Item information</legend>
             Item Name:<br>
@@ -20,7 +21,9 @@
             </datalist>
 
             Description:<br>
-            <input type="text" name="description"><br><br>
+            <input type="text" name="description"><br>
+            Image:
+            <input type="file" name="image" accept="image/png|image/jpeg"><br><br>
             <button type="submit" id="submit" type="submit">Create</button>
         </fieldset>
     </form>

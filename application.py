@@ -3,11 +3,18 @@ from flask import flash, get_flashed_messages
 from flask import redirect, make_response
 from flask import session as login_session
 import database as db
-from models import Category, User, Item, Base
+from models import Category, User, Item, Base, Image
 from oauth import generateStateString, getUserDataFB
 from oauth import fb_user_info_fields
-from flask import json, jsonify
+from flask import json, jsonify, send_from_directory
+import os
+from werkzeug import secure_filename
+
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['UPLOAD_DIR'] = './uploads/'
+ALLOWED_EXTENSIONS = set(['png', 'jpeg', 'jpg'])
+
 engine = None
 DBSession = None
 session = None
@@ -239,20 +246,21 @@ def view_item_post(id):
         # ensure logged in user owns the item
         if login_session['user_info']['user_id'] == resp['item'].user_id:
             if request.form['requestType'] == "edit":
-                # add new category
-                try:
-                    cat = session.query(Category).filter_by(name=request.form['category']).one()
-                except db.NoResultFound:
-                    cat = Category(name=request.form['category'])
-                    session.add(cat)
-                # remove unused category
-                cat_n = session.query(Category).\
-                    filter_by(name=resp['item'].category.name).\
-                    count()
-                if cat_n == 1:
-                    session.delete(resp['item'].category)
+                if request.form['category'] != resp['item'].category.name:
+                    # see if category exists
+                    try:
+                        cat = session.query(Category).filter_by(name=request.form['category']).one()
+                    except db.NoResultFound:
+                        cat = Category(name=request.form['category'])
+                        session.add(cat)
+                    # remove unused category
+                    cat_n = session.query(Category).\
+                        filter_by(name=resp['item'].category.name).\
+                        count()
+                    if cat_n == 1:
+                        session.delete(resp['item'].category)
+                    resp['item'].category = cat
                 # update item
-                resp['item'].category = cat
                 resp['item'].name = request.form['itemName']
                 resp['item'].description = request.form['description']
                 session.add(resp['item'])
@@ -371,6 +379,12 @@ def view_item_delete(id):
     return resp['html']
 
 
+def allowed_file(filename):
+    '''check filename is of the correct type'''
+    return '.' in filename and \
+        filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+
 @app.route('/item/new/', methods=['POST'])
 def view_item_new_post():
     '''handle new item requests'''
@@ -384,17 +398,33 @@ def view_item_new_post():
         except db.NoResultFound:
             new_cat = Category(name=request.form['category'])
             session.add(new_cat)
-        # create item
-        new_item = Item(
-            name=request.form['itemName'],
-            category=new_cat,
-            description=request.form['description'],
-            user_id=login_session['user_info']['user_id'])
-        # update db
-        session.add(new_item)
-        session.commit()
-        flash("%s added to items." % new_item.name)
-        resp['html'] = redirect("/item/")
+        # create image
+        f = request.files['image']
+        if f and allowed_file(f.filename):
+            filename = secure_filename(f.filename)
+            new_image = Image(
+                original_name=f.name,
+                user_id=login_session['user_info']['user_id'],
+                filename=filename)
+            session.add(new_image)
+            # create item
+            new_item = Item(
+                name=request.form['itemName'],
+                category=new_cat,
+                description=request.form['description'],
+                user_id=login_session['user_info']['user_id'],
+                image=new_image)
+            # update db
+            session.add(new_item)
+            session.commit()
+            # save image near commit
+            f.save(os.path.join(app.config['UPLOAD_DIR'], filename))
+            flash("%s added to items." % new_item.name)
+            resp['html'] = redirect('/item/')
+        else:
+            flash('Error: bad image selected')
+            resp['html'] = redirect('/item/new/')
+
     else:
         resp['html'] = redirect('/login/')
     return resp['html']
@@ -413,6 +443,11 @@ def view_item_new():
     else:
         flash("Error: you are not logged in")
         return redirect('/login/')
+
+
+@app.route('/uploads/<string:filename>/')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_DIR'], filename)
 
 
 def init_db(path):
