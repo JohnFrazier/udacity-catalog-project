@@ -2,6 +2,11 @@ import unittest
 from application import app, init_db
 import application as catalog
 from functools import update_wrapper
+from StringIO import StringIO
+
+
+test_image_name_1 = "placeholdit.png"
+test_image_name_2 = "placeholdit2.png"
 
 
 def decorator(d):
@@ -44,6 +49,12 @@ class ApplicationTestCase(unittest.TestCase):
         # login session
         query = dict(state='testingstate')
         self.app.post('/fbconnect', query_string=query, data='testytesttest')
+        with open(test_image_name_1, 'r') as test_image:
+            self.image_string = StringIO(test_image.read())
+        with open(test_image_name_2, 'r') as test_image2:
+            self.image2_string = StringIO(test_image2.read())
+        del test_image
+        del test_image2
 
     def tearDown(self):
         # TODO destroy test db
@@ -117,9 +128,15 @@ class PostTests(ApplicationTestCase):
         data = dict(
             itemName="test_item",
             category="test category",
-            description="Just a fake post.")
+            description="Just a fake post.",
+            image=(self.image_string, 'test.png'))
         ret = self.createItem(data)
         assert 'test_item added' in ret.data
+        assert 'test.png' in ret.data
+        assert data['itemName'] in ret.data
+        assert data['category'] in ret.data
+        assert data['description'] in ret.data
+
         assert 'test_item' in self.app.get('/item/').data
 
     def test_delItem(self):
@@ -127,7 +144,8 @@ class PostTests(ApplicationTestCase):
         data = dict(
             itemName="test_delItem",
             category="test_category",
-            description="death comes quickly for me")
+            description="death comes quickly for me",
+            image=(self.image_string, 'test.png'))
         ret = self.createItem(data)
         assert 'test_delItem added' in ret.data
         # fetch the item for the id
@@ -144,29 +162,39 @@ class PostTests(ApplicationTestCase):
 
     def test_editItem(self):
         '''create and then edit a item'''
-        dataPre = dict(
+        data_pre = dict(
             itemName="test_editItem_pre",
             category="test_cat_pre_edit",
-            description="change comes quickly for me")
+            description="change comes quickly for me",
+            image=(self.image_string, 'test.png'))
 
-        dataPost = dict(
+        data_post = dict(
             requestType="edit",
             itemName="test_editedItem",
             category="test_cat_post_edit",
-            description="changes")
+            description="changes",
+            image=(self.image2_string, 'test2.png'))
         # add a test item
-        ret = self.createItem(dataPre)
+        ret = self.createItem(data_pre)
         # find the item id
         item = catalog.session.query(catalog.Item).filter_by(
-            name=dataPre['itemName']).one()
+            name=data_pre['itemName']).one()
         assert 'test_editItem_pre added' in ret.data
+        assert 'test2.png' in ret.data
+        assert data_post['itemName'] in ret.data
+        assert data_post['category'] in ret.data
+        assert data_post['description'] in ret.data
+        assert 'test.png' not in ret.data
+        assert data_pre['itemName'] not in ret.data
+        assert data_pre['category'] not in ret.data
+        assert data_pre['description'] not in ret.data
 
         # update by id
         ret = self.app.post(
             "/item/%s/" % item.id,
-            data=dataPost,
+            data=data_post,
             follow_redirects=True)
-        assert '%s updated' % dataPost['itemName'] in ret.data
+        assert '%s updated' % data_post['itemName'] in ret.data
 
 
 if __name__ == '__main__':
