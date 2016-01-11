@@ -4,9 +4,6 @@
 
 {% block body %}
 <div class="pure-g">
-    <div class="pure-u-1"><a href={{url_for("view_item_new")}}>Add Item</a></div>
-</div>
-<div class="pure-g">
     <div class="pure-u-1"><h2>Item list:</h2></div>
 </div>
 <div class="pure-g pure-u-1">
@@ -25,18 +22,23 @@
             {% if items != None %}
                 {% for i in items %}
                     <tr>
-                        <td><a href={{ url_for('view_item', id=i.id) }}>{{
+                        <td><a class="pure-button" href={{ url_for('view_item', id=i.id) }}>{{
                             i.id }}</a></td>
                         <td>
-                            <img src="{{ url_for('uploaded_file', filename=i.image.filename) }}"
+                            <img class=".pure-img"
+                                src="{{ url_for('uploaded_file', filename=i.image.filename) }}"
                                 alt="{{ i.image.original_name }}"
-                                style="width:30px;height:30px"></td>
+                                style="height:50px"></td>
                         <td><a href={{ url_for('view_user', id=i.user.id) }}>
                                 {{ i.user.name }}</a></td>
                         <td>{{ i.name }}</td>
-                        <td><a href={{ url_for(
-                            'view_category', id=i.category_id)
-                            }}>{{ i.category.name }}</a> </td>
+                        {% if i.category %}
+                            <td><a href={{
+                                url_for('view_category', id=i.category.id)
+                                }}>{{ i.category.name }}</a> </td>
+                        {% else %}
+                            <td>None</td>
+                        {% endif %}
                         <td>{{ i.description }}</td>
                     </tr>
                 {% endfor %}

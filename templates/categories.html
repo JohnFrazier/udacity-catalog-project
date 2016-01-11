@@ -12,13 +12,15 @@
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>No. members</th>
             </tr>
         </thead>
         </tbody>
             {% for i in categories %}
                 <tr>
-                    <td><a href={{ url_for('view_category', id=i.id)}}>{{i.id}}</a></td>
+                    <td><a class="pure-button" href={{ url_for('view_category', id=i.id)}}>{{i.id}}</a></td>
                     <td>{{ i.name }}</td>
+                    <td>{{ i.items|count }}</td>
                 </tr>
             {% endfor %}
         </tbody>

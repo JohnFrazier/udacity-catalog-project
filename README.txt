@@ -1,4 +1,4 @@
-A generic cataloging application for udacity project.
+A cataloging application for udacity project.
 ===
 
 
@@ -6,7 +6,8 @@ Usage
 =====
 
 1. Confirm listening address and port in application.py
-2. Python application.py
+2. pip-install flask-WTF
+2. python application.py
 
 
 Unit Tests

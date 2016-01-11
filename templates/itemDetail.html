@@ -7,17 +7,26 @@
         <div class="pure-u-1"><h1>Item: {{ item.name }}</h1></div>
     </div>
     <div class="pure-g pure-u-1">
-        <img src="{{ url_for('uploaded_file', filename=item.image.filename) }}"
+        <img class=".pure-img" src="{{ url_for('uploaded_file', filename=item.image.filename) }}"
             alt="{{ item.image.original_name }}">
     </div>
     <div class="pure-g pure-u-1">
         <div class="pure-u-1-12">ID: {{ item.id }}</div>
         <div class="pure-u-1-4">Owner: <a href="{{ url_for('view_user', id=item.user_id) }}">
                 {{ item.user.name }}</a></div>
-        <div class="pure-u-1-4">Category: <a
-            href="{{ url_for('view_category', id=item.category.id) }}">
-                {{ item.category.name }}</a></div>
+        <div class="pure-u-1-4">Category:
+        {% if item.category %}
+            <a href="{{ url_for('view_category', id=item.category.id) }}">
+                {{ item.category.name }}</a>
+        {% else %}
+            None
+        {% endif %}
+        </div>
         <div class="pure-u-1-4">Description: {{ item.description }}</div>
+    </div>
+    <div class="pure-g pure-u-1">
+        <div class="pure-u-1-2">created: {{ item.created_date }}</div>
+        <div class="pure-u-1-2">updated: {{ item.updated_date }}</div>
     </div>
     <div class="pure-g pure-u-1"><br></div>
     <div class="pure-g pure-u-1">

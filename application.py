@@ -1,20 +1,26 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for
 from flask import flash, get_flashed_messages
 from flask import redirect, make_response
 from flask import session as login_session
 import database as db
 from models import Category, User, Item, Base, Image
+from models import desc, datetime
 from oauth import generateStateString, getUserDataFB
 from oauth import fb_user_info_fields
 from flask import json, jsonify, send_from_directory
 import os
+
 from werkzeug import secure_filename
+from forms import ItemForm, ItemDeleteForm, LogoutForm
+from werkzeug.contrib.atom import AtomFeed
 
 app = Flask(__name__)
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['UPLOAD_DIR'] = './uploads/'
-ALLOWED_EXTENSIONS = set(['png', 'jpeg', 'jpg'])
 
+ALLOWED_EXTENSIONS = set(['png', 'jpeg', 'jpg'])
+APP_SECRET_FILENAME = "./secrets/application_secret"
 engine = None
 DBSession = None
 session = None
@@ -47,7 +53,13 @@ def resp_to_json(resp, messages):
 
 @app.route('/')
 def view_main():
-    return render_template('main.html', login_session=login_session)
+    cats = session.query(Category).all()
+    recent_items = session.query(Item).order_by(desc(Item.id)).limit(10)
+    return render_template(
+        'main.html',
+        login_session=login_session,
+        categories=cats,
+        recent_items=recent_items)
 
 
 @app.route('/login/')
@@ -134,8 +146,9 @@ def fb_oauth_request():
 def view_logout():
     '''show logout form and handle its requests'''
     resp = dict(error=False)
-    if request.method == 'POST':
-        if login_session['state'] == request.form['state']:
+    lo_form = LogoutForm()
+    if lo_form.validate_on_submit():
+        if login_session['state'] == lo_form.state.data:
             login_session.pop('state', None)
             login_session.pop('user_info', None)
             flash("You have successfully logged out")
@@ -153,7 +166,7 @@ def view_logout():
             resp['html'] = render_template(
                 'logout.html',
                 user_name=login_session['user_info']['name'],
-                login_session=login_session)
+                login_session=login_session, form=lo_form)
     return resp['html']
 
 
@@ -232,66 +245,100 @@ def view_items():
     return resp['html']
 
 
+def pop_category(category, session):
+    '''remove category from session if unused'''
+    if not category or not session:
+        return
+    cat_n = session.query(Category).\
+        filter_by(name=category.name).\
+        count()
+    if cat_n == 1:
+        session.delete(category)
+
+
+def update_category(new_cat_name, session, old_cat):
+    '''add new category to session if it doesn't exist'''
+
+    # see if category exists
+    if old_cat:
+        if new_cat_name == old_cat.name:
+            return old_cat
+        try:
+            cat = session.query(Category).filter_by(name=new_cat_name).one()
+        except db.NoResultFound:
+            cat = Category(name=new_cat_name)
+            session.add(cat)
+    else:
+        cat = Category(name=new_cat_name)
+        session.add(cat)
+    # remove unused category
+    pop_category(old_cat, session)
+    return cat
+
+
+def allowed_file(filename):
+    '''check filename is of the correct type'''
+    return '.' in filename and \
+        filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+
+def push_image(session, orig_filename):
+    '''generate filename and add file image to db'''
+    filename = str(login_session['user_info']['user_id']) + secure_filename(orig_filename)
+    new_image = Image(
+        original_name=orig_filename,
+        user_id=login_session['user_info']['user_id'],
+        filename=filename)
+    session.add(new_image)
+    return new_image
+
+
 @app.route('/item/<int:id>/', methods=['POST'])
 def view_item_post(id):
     '''handle post requests for an item'''
-    if check_active_session(login_session) and \
-            'user_info' in login_session.keys():
-        resp = dict(item=None, error=False)
-        resp['item'] = session.query(Item).get(id)
-        if not resp['item']:
-            flash("Error: Item not found")
-            resp['error'] = True
-            resp['html'] = redirect('/item/')
-        # ensure logged in user owns the item
-        if login_session['user_info']['user_id'] == resp['item'].user_id:
-            if request.form['requestType'] == "edit":
-                if request.form['category'] != resp['item'].category.name:
-                    # see if category exists
-                    try:
-                        cat = session.query(Category).filter_by(name=request.form['category']).one()
-                    except db.NoResultFound:
-                        cat = Category(name=request.form['category'])
-                        session.add(cat)
-                    # remove unused category
-                    cat_n = session.query(Category).\
-                        filter_by(name=resp['item'].category.name).\
-                        count()
-                    if cat_n == 1:
-                        session.delete(resp['item'].category)
-                    resp['item'].category = cat
-                # update item
-                resp['item'].name = request.form['itemName']
-                resp['item'].description = request.form['description']
-                session.add(resp['item'])
-                session.commit()
-                flash("%s updated." % resp['item'].name)
-            elif request.form['requestType'] == "delete":
-                # remove unused category
-                cat_n = session.query(Category).\
-                    filter_by(name=resp['item'].category.name).\
-                    count()
-                if cat_n == 1:
-                    session.delete(resp['item'].category)
-                # remove item
-                session.delete(resp['item'])
-                session.commit()
-                flash("%s deleted" % resp['item'].name)
-                resp['html'] = redirect('/item/')
-        else:
-            flash("Error: only the item owner can modify this item")
-            resp['error'] = True
-    else:
+    if not check_active_session(login_session) and \
+            'user_info' not in login_session.keys():
+        flash("Error: invalid session")
+        return redirect('/item/')
+
+    item = session.query(Item).get(id)
+    if not item:
+        flash("Error: Item not found")
+        return redirect('/item/')
+
+    # ensure logged in user owns the item
+    if not login_session['user_info']['user_id'] == item.user_id:
         flash("Error: You are not logged in")
-        resp['html'] = redirect('/login/')
-    if not resp['error'] and 'html' not in resp.keys():
-        resp['html'] = render_template(
-            'itemDetail.html',
-            login_session=login_session,
-            item=resp['item'])
-    else:
-        resp['html'] = redirect('/item/')
-    return resp['html']
+        return redirect('/login/')
+
+    edit_form = ItemForm()
+    if edit_form.validate_on_submit():
+        # update image if included
+        item.image = push_image(session, edit_form.image.data.filename)
+        if item.category != edit_form.category.data:
+            # update category if changed
+            item.category = update_category(
+                edit_form.category.data, session, item.category)
+        # update item
+        item.name = edit_form.name.data
+        item.description = edit_form.description.data
+        item.updated_date = datetime.utcnow()
+        session.add(item)
+        # save image near commit
+        edit_form.image.data.save(os.path.join(app.config['UPLOAD_DIR'], item.image.filename))
+        session.commit()
+        flash("%s updated." % item.name)
+        return redirect("/item/%s/" % item.id)
+
+    del_form = ItemDeleteForm()
+    if del_form.validate_on_submit():
+        # remove unused category
+        pop_category(item.category, session)
+        # remove item
+        session.delete(item)
+        session.commit()
+        flash("%s deleted" % item.name)
+        return redirect('/item/')
 
 
 @app.route('/item/<int:id>/', methods=['GET'])
@@ -331,13 +378,21 @@ def view_item_edit(id):
             resp['error'] = True
             resp['html'] = redirect('/item/')
         else:
+            form = ItemForm()
+            # set default values in form
+            p = resp['item'].as_dict()
+            form.name.data = p['name']
+            form.category.data = p['category']
+            form.description.data = p['description']
             # check login status before sending template
-            if login_session['user_info']['user_id'] == resp['item'].user_id:
+            if login_session['user_info'] and \
+                    login_session['user_info']['user_id'] == resp['item'].user_id:
                 resp['html'] = render_template(
                     'itemEdit.html',
                     item=resp['item'],
                     cats=session.query(Category).all(),
-                    login_session=login_session)
+                    login_session=login_session,
+                    form=form)
             else:
                 resp['error'] = True
                 resp['html'] = redirect('/item/%s/' % id)
@@ -353,6 +408,7 @@ def view_item_edit(id):
 def view_item_delete(id):
     '''show a form for deleting an item'''
     resp = dict(item=None, error=False)
+    form = ItemDeleteForm()
     # check session status and user is logged in
     if check_active_session(login_session) and \
             'user_info' in login_session.keys():
@@ -369,6 +425,7 @@ def view_item_delete(id):
                 resp['html'] = render_template(
                     'itemDelete.html',
                     item=resp['item'],
+                    form=form,
                     login_session=login_session)
             else:
                 resp['error'] = True
@@ -379,67 +436,58 @@ def view_item_delete(id):
     return resp['html']
 
 
-def allowed_file(filename):
-    '''check filename is of the correct type'''
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
-
-
 @app.route('/item/new/', methods=['POST'])
 def view_item_new_post():
     '''handle new item requests'''
-    resp = dict()
     # ensure user is logged in and session is active
-    if check_active_session(login_session) and \
-            'user_info' in login_session.keys():
+    if not check_active_session(login_session) and \
+            'user_info' not in login_session.keys():
+        flash("Error: you are not logged in.")
+        return redirect('/login/')
+
+    form = ItemForm()
+    if form.validate_on_submit():
         # add category if needed
         try:
-            new_cat = session.query(Category).filter_by(name=request.form['category']).one()
+            new_cat = session.query(Category).filter_by(name=form.category.data).one()
         except db.NoResultFound:
-            new_cat = Category(name=request.form['category'])
+            new_cat = Category(name=form.category.data)
             session.add(new_cat)
-        # create image
-        f = request.files['image']
-        if f and allowed_file(f.filename):
-            filename = secure_filename(f.filename)
-            new_image = Image(
-                original_name=f.name,
-                user_id=login_session['user_info']['user_id'],
-                filename=filename)
-            session.add(new_image)
-            # create item
-            new_item = Item(
-                name=request.form['itemName'],
-                category=new_cat,
-                description=request.form['description'],
-                user_id=login_session['user_info']['user_id'],
-                image=new_image)
-            # update db
-            session.add(new_item)
-            session.commit()
-            # save image near commit
-            f.save(os.path.join(app.config['UPLOAD_DIR'], filename))
-            flash("%s added to items." % new_item.name)
-            resp['html'] = redirect('/item/')
-        else:
-            flash('Error: bad image selected')
-            resp['html'] = redirect('/item/new/')
-
+        # create db image
+        new_image = push_image(session, form.image.data.filename)
+        # create item
+        new_item = Item(
+            name=form.name.data,
+            category=new_cat,
+            description=form.description.data,
+            created_date=datetime.utcnow(),
+            updated_date=datetime.utcnow(),
+            user_id=login_session['user_info']['user_id'],
+            image=new_image)
+        # update db
+        session.add(new_item)
+        session.commit()
+        # save image near commit
+        form.image.data.save(os.path.join(app.config['UPLOAD_DIR'], new_image.filename))
+        flash("%s added to items." % new_item.name)
+        return redirect('/item/')
     else:
-        resp['html'] = redirect('/login/')
-    return resp['html']
+        flash('Error: bad form %s' % form.errors)
+        return redirect('/item/new/')
 
 
 @app.route('/item/new/', methods=['GET'])
 def view_item_new():
     '''show new item form'''
+    form = ItemForm()
     # ensure user is logged in
     if check_active_session(login_session) and \
             'user_info' in login_session.keys():
         return render_template(
             'itemNew.html',
             cats=session.query(Category).all(),
-            login_session=login_session)
+            login_session=login_session,
+            form=form)
     else:
         flash("Error: you are not logged in")
         return redirect('/login/')
@@ -448,6 +496,25 @@ def view_item_new():
 @app.route('/uploads/<string:filename>/')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_DIR'], filename)
+
+
+@app.route('/recent_feed.xml')
+def recent_feed():
+    feed = AtomFeed(
+        "Catalog",
+        feed_url=request.host_url,
+        subtitle="Recent item feed for Catalog")
+    for item in session.query(Item).order_by(desc(Item.id)).limit(10).all():
+        feed.add(
+            item.name,
+            item.description,
+            content_type='html',
+            owner=item.user.name,
+            url=url_for('view_item', id=item.id, _external=True),
+            updated=item.updated_date,
+            created=item.created_date)
+
+    return feed.get_response()
 
 
 def init_db(path):
@@ -461,7 +528,11 @@ def init_app():
     '''initialize debug application'''
     init_db('sqlite:///catalog.db')
     app.debug = True
-    app.secret_key = "something_secret"
+    assert os.path.exists(APP_SECRET_FILENAME)
+    with open(APP_SECRET_FILENAME, 'r') as f:
+        app.secret_key = f.read()
+        del f
+    assert app.secret_key
     app.testing = False
 
 

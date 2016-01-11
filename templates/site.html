@@ -5,9 +5,10 @@
 <title>Catalog - {% block title %}{% endblock %}</title>
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='pure-release-0.6.0/pure-min.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='pure-release-0.6.0/grids-responsive-min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='pure-release-0.6.0/grids-responsive-min.css') }}">
+<link rel="alternate" href="{{ url_for('recent_feed', _external=True) }}" type="application/atom+xml">
 </head>
 <body>
-<div>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <div class="header">
     <div class="pure-menu pure-menu-horizontal">
@@ -21,6 +22,9 @@
             </li>
             {% if 'user_info' in login_session.keys() %}
                 <li class="pure-menu-item">
+                    <a class="pure-menu-link" href={{ url_for('view_item_new') }}>Add Item</a>
+                </li>
+                <li class="pure-menu-item">
                     <a class="pure-menu-link" href="{{ url_for('view_logout') }}">Logout</a>
                 </li>
             {% else %}
@@ -28,12 +32,19 @@
                     <a class="pure-menu-link" href="{{ url_for('view_login') }}">Login</a>
                 </li>
             {% endif %}
+            <li class="pure-menu-item">
+                <a class="pure-menu-link"
+                   href="{{ url_for('recent_feed') }}"
+                   rel="alternate"
+                   title="Recent Changes"
+                   type="application/atom+xml">Atom Feed</a>
+           </li>
         </ul>
     </div>
 </div>
 
 
-<div class="pure-g pure-u-1">
+<div class="pure-g pure-u">
     {% block flash %}
         {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -46,10 +57,7 @@
         {% endwith %}
     {% endblock %}
 </div>
-<div class="pure-g pure-u-1">
-    {% block body %}
-    {% endblock %}
-</div>
-</div>
+{% block body %}
+{% endblock %}
 </body>
 </html>

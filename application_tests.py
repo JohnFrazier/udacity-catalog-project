@@ -4,7 +4,6 @@ import application as catalog
 from functools import update_wrapper
 from StringIO import StringIO
 
-
 test_image_name_1 = "placeholdit.png"
 test_image_name_2 = "placeholdit2.png"
 
@@ -41,6 +40,7 @@ class ApplicationTestCase(unittest.TestCase):
 
     def setUp(self):
         app.config['testing'] = True
+        app.config['WTF_CSRF_ENABLED'] = False
         app.debug = True
         app.secret_key = "something_secret"
         app.testing = True
@@ -111,49 +111,54 @@ class PathTests(ApplicationTestCase):
 
 class PostTests(ApplicationTestCase):
 
-    def createItem(self, data):
+    def createItem(self, form):
         return self.app.post(
             "/item/new/",
-            data=data,
+            data=form,
             follow_redirects=True)
 
     def deleteItem(self, id):
-        data = dict(requestType="delete")
+        form = dict(form_id='ItemDeleteForm')
         return self.app.post(
             "/item/%s/" % id,
-            data=data,
+            data=form,
             follow_redirects=True)
 
     def test_newItem(self):
-        data = dict(
-            itemName="test_item",
-            category="test category",
-            description="Just a fake post.",
+        newform = dict(
+            csrf="fake",
+            form_id='ItemForm',
+            name="test_Item",
+            category="test_cat_pre_edit",
+            description="test description",
             image=(self.image_string, 'test.png'))
-        ret = self.createItem(data)
-        assert 'test_item added' in ret.data
-        assert 'test.png' in ret.data
-        assert data['itemName'] in ret.data
-        assert data['category'] in ret.data
-        assert data['description'] in ret.data
+        ret = self.createItem(newform)
+        assert '%s added' % newform['name'] in ret.data
+        assert '%s' % newform['image'][1] in ret.data
+        assert newform['name'] in ret.data
+        assert newform['category'] in ret.data
+        assert newform['description'] in ret.data
 
-        assert 'test_item' in self.app.get('/item/').data
+        assert newform['name'] in self.app.get('/item/').data
 
     def test_delItem(self):
         '''add and then delete an item'''
-        data = dict(
-            itemName="test_delItem",
-            category="test_category",
-            description="death comes quickly for me",
+        newform = dict(
+            csrf="fake",
+            form_id='ItemForm',
+            name="test_delItem",
+            category="test_delitem",
+            description="test description",
             image=(self.image_string, 'test.png'))
-        ret = self.createItem(data)
+        ret = self.createItem(newform)
         assert 'test_delItem added' in ret.data
+
         # fetch the item for the id
         item = catalog.session.query(catalog.Item).filter_by(
-            name=data['itemName']).one()
-        assert item.name == data['itemName']
-        assert item.description == data['description']
-        assert item.category.name == data['category']
+            name=newform['name']).one()
+        assert item.name == newform['name']
+        assert item.description == newform['description']
+        assert item.category.name == newform['category']
         ret = self.deleteItem(item.id)
         if "rror" in ret.data:
             print ret
@@ -163,14 +168,15 @@ class PostTests(ApplicationTestCase):
     def test_editItem(self):
         '''create and then edit a item'''
         data_pre = dict(
-            itemName="test_editItem_pre",
+            form_id='ItemForm',
+            name="test_editItem_pre",
             category="test_cat_pre_edit",
             description="change comes quickly for me",
             image=(self.image_string, 'test.png'))
 
         data_post = dict(
-            requestType="edit",
-            itemName="test_editedItem",
+            form_id='ItemEditForm',
+            name="test_editedItem",
             category="test_cat_post_edit",
             description="changes",
             image=(self.image2_string, 'test2.png'))
@@ -178,23 +184,27 @@ class PostTests(ApplicationTestCase):
         ret = self.createItem(data_pre)
         # find the item id
         item = catalog.session.query(catalog.Item).filter_by(
-            name=data_pre['itemName']).one()
+            name=data_pre['name']).one()
         assert 'test_editItem_pre added' in ret.data
-        assert 'test2.png' in ret.data
-        assert data_post['itemName'] in ret.data
-        assert data_post['category'] in ret.data
-        assert data_post['description'] in ret.data
-        assert 'test.png' not in ret.data
-        assert data_pre['itemName'] not in ret.data
-        assert data_pre['category'] not in ret.data
-        assert data_pre['description'] not in ret.data
+        assert 'test.png' in ret.data
+        assert data_pre['name'] in ret.data
+        assert data_pre['category'] in ret.data
+        assert data_pre['description'] in ret.data
 
         # update by id
         ret = self.app.post(
             "/item/%s/" % item.id,
             data=data_post,
             follow_redirects=True)
-        assert '%s updated' % data_post['itemName'] in ret.data
+        assert '%s updated' % data_post['name'] in ret.data
+        assert 'test2.png' in ret.data
+        assert 'test.png' not in ret.data
+        assert data_post['name'] in ret.data
+        assert data_post['category'] in ret.data
+        assert data_post['description'] in ret.data
+        assert data_pre['name'] not in ret.data
+        assert data_pre['category'] not in ret.data
+        assert data_pre['description'] not in ret.data
 
 
 if __name__ == '__main__':

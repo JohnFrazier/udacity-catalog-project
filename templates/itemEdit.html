@@ -12,29 +12,46 @@
 <div class="pure-g pure-u-1">
     <div class="pure-u-1-5">ID: {{ item.id }}</div>
     <div class="pure-u-1-4">Item: {{ item.name }}</div>
+    {% if item.category %}
     <div class="pure-u-1-4">Category: {{ item.category.name }}</div>
+    {% else %}
+    <div class="pure-u-1-4">Category: None</div>
+    {% endif %}
     <div class="pure-u-1-4">Description: {{ item.description }}</div>
 </div>
 <div class="pure-g pure-u-1"><br></div>
-<form class="pure-form pure-g pure-u-1" action="{{ url_for('view_item', id=item.id) }}"
+<form class="pure-form-aligned pure-g pure-u-1" action="{{ url_for('view_item', id=item.id) }}"
     enctype="multipart/form-data" method="post">
     <input type="hidden" name="requestType" value="edit">
+    {{ form.csrf_token }}
+    {{ form.form_id }}
     <fieldset>
         <legend>Enter new information</legend>
-        Item Name:<br>
-        <input type="text" name="itemName" value="{{item.name}}"><br>
-        Category:<br>
-        <input type="text" name="category" list="categories" value="{{item.category.name}}"><br>
-        <datalist id="categories">
-            {% for c in cats %}
-            <option value={{ c.name }}>
-            {% endfor %}
-        </datalist>
-
-        Description:<br>
-        <input type="text" name="description" value="{{item.description}}"><br>
-        <input type="file" name="image" accept="image/png|image/jpeg"><br><br>
-        <button type="submit" id="submit" type="submit">Update</button>
+        <div class="pure-control-group">
+            {{ form.name.label }} {{ form.name(size=20) }}
+        </div>
+        <div class="pure-control-group">
+            {{ form.category.label }}
+            {% if item.category %}
+            <input type="text" name="category" list="categories" value="{{item.category.name}}" required>
+            {% else %}
+            <input type="text" name="category" list="categories" required>
+            {% endif %}
+            <datalist id="categories">
+                {% for c in cats %}
+                <option value={{ c.name }}>
+                {% endfor %}
+            </datalist>
+        </div>
+        <div class="pure-control-group">
+            {{ form.description.label }} {{ form.description() }}
+        </div>
+        <div class="pure-control-group">
+            {{ form.image.label }} {{ form.image() }}
+        </div>
+        <div class="pure-controls">
+            <button type="submit" id="submit" type="submit">Update</button>
+        </div>
     </fieldset>
 </form>
 {% endblock %}

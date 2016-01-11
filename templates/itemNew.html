@@ -6,25 +6,33 @@
 <div class="pure-g pure-u-1"><h2>Create a new item</h2></div>
 
 <div class="pure-g pure-u-1">
-    <form class="pure-form" action="{{ url_for('view_item_new') }}" 
+    <form class="pure-form-aligned" action="{{ url_for('view_item_new') }}"
         enctype="multipart/form-data" method="post">
+        {{ form.csrf_token }}
+        {{ form.form_id }}
         <fieldset>
             <legend>Item information</legend>
-            Item Name:<br>
-            <input type="text" name="itemName"><br>
-            Category:<br>
-            <input type="text" name="category" list="categories"><br>
-            <datalist id="categories">
-                {% for c in cats %}
-                <option value={{ c.name }}>
-                {% endfor %}
-            </datalist>
-
-            Description:<br>
-            <input type="text" name="description"><br>
-            Image:
-            <input type="file" name="image" accept="image/png|image/jpeg"><br><br>
-            <button type="submit" id="submit" type="submit">Create</button>
+            <div class="pure-control-group">
+                {{ form.name.label }} {{ form.name() }}
+            </div>
+            <div class="pure-control-group">
+                {{ form.category.label }}
+                <input type="text" name="category" list="categories" required>
+                <datalist id="categories">
+                    {% for c in cats %}
+                    <option value={{ c.name }}>
+                    {% endfor %}
+                </datalist>
+            </div>
+            <div class="pure-control-group">
+                {{ form.description.label }} {{ form.description() }}
+            </div>
+            <div class="pure-control-group">
+                {{ form.image.label }} {{ form.image() }}
+            </div>
+            <div class="pure-controls">
+                <button type="submit" id="submit" type="submit">Create</button>
+            </div>
         </fieldset>
     </form>
 </div>

@@ -1,6 +1,7 @@
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, desc, DateTime
 from sqlalchemy.orm import relationship, backref
 from database import Base
+from datetime import datetime
 
 
 # site users
@@ -32,13 +33,16 @@ class Item(Base):
     user = relationship(User, backref=backref("items"))
     image_id = Column(Integer, ForeignKey('images.id'), nullable=False)
     image = relationship("Image", backref=backref('images'))
+    updated_date = Column(DateTime, default=datetime.utcnow)
+    created_date = Column(DateTime, default=datetime.utcnow)
 
     def as_dict(self):
         return dict(
             id=self.id,
             name=self.name,
+            description=self.description,
             category_id=self.category_id,
-            category=self.category.name)
+            category=self.category)
 
 
 # item categories
