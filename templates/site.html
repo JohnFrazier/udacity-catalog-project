@@ -22,7 +22,10 @@
             </li>
             {% if 'user_info' in login_session.keys() %}
                 <li class="pure-menu-item">
-                    <a class="pure-menu-link" href={{ url_for('view_item_new') }}>Add Item</a>
+                    <a class="pure-menu-link" href="{{ url_for('view_item_new') }}">Add Item</a>
+                </li>
+                <li class="pure-menu-item">
+                    <a class="pure-menu-link" href="{{ url_for('view_user', id=login_session['user_info']['user_id']) }}">Profile</a>
                 </li>
                 <li class="pure-menu-item">
                     <a class="pure-menu-link" href="{{ url_for('view_logout') }}">Logout</a>
@@ -32,13 +35,6 @@
                     <a class="pure-menu-link" href="{{ url_for('view_login') }}">Login</a>
                 </li>
             {% endif %}
-            <li class="pure-menu-item">
-                <a class="pure-menu-link"
-                   href="{{ url_for('recent_feed') }}"
-                   rel="alternate"
-                   title="Recent Changes"
-                   type="application/atom+xml">Atom Feed</a>
-           </li>
         </ul>
     </div>
 </div>
