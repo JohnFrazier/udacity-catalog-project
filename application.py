@@ -527,7 +527,7 @@ def init_db(path):
 def init_app():
     '''initialize debug application'''
     init_db('sqlite:///catalog.db')
-    app.debug = True
+    app.debug = False
     assert os.path.exists(APP_SECRET_FILENAME)
     with open(APP_SECRET_FILENAME, 'r') as f:
         app.secret_key = f.read()
