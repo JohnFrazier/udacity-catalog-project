@@ -11,7 +11,7 @@ from flask import json, jsonify, send_from_directory
 import os
 
 from werkzeug import secure_filename
-from forms import ItemForm, ItemDeleteForm, LogoutForm
+from appforms import ItemForm, ItemDeleteForm, LogoutForm
 from werkzeug.contrib.atom import AtomFeed
 
 app = Flask(__name__)
